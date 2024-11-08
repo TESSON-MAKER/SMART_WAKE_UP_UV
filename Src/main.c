@@ -70,7 +70,6 @@ int main(void)
 			temp = URM37_GetTemperature();
 		}
 		
-		
 		switch (BUTTON_Switch)
 		{
 			case 0:
