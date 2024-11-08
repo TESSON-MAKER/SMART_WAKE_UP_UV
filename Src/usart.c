@@ -1,5 +1,8 @@
 #include "../Inc/usart.h"
 
+#include <stdio.h>
+#include <stdarg.h>
+
 /*******************************************************************
  * @name       :USART_Serial_Begin
  * @date       :2024-10-31

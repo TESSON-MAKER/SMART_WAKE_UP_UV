@@ -2,14 +2,12 @@
 #define SH1106_H_
 
 #include <stdint.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <stm32f7xx.h>
 
 #include "../Fonts/fonts.h"
 
 //Pins activated/desactivated
-#define SH1106_DC_LOW (GPIOA->BSRR=GPIO_BSRR_BR0)
+#define SH1106_DC_LOW (GPIOA->BSRR=GPIO_BSRR_BR0);
 #define SH1106_DC_HIGH (GPIOA->BSRR=GPIO_BSRR_BS0)
 
 #define SH1106_CS_LOW (GPIOC->BSRR=GPIO_BSRR_BR1)
