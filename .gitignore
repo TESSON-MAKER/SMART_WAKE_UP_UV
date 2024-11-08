@@ -6,4 +6,17 @@ RTE
 SMART_WAKE_UP.uvguix.pault
 SMART_WAKE_UP.uvoptx
 
+out
+SMART_WAKE_UP.cbuild-pack.yml
+SMART_WAKE_UP.csolution.yml
+uv2csolution.log
+SMART_WAKE_UP.cbuild-set.yml
+SMART_WAKE_UP+Target_1.cbuild.yml
+vcpkg-configuration.json
+SMART_WAKE_UP.cbuild-idx.yml
+SMART_WAKE_UP.cproject.yml
+SMART_WAKE_UP_Target_1.sct
+tmp
 
+.clangd
+.vscode

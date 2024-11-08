@@ -1,6 +1,9 @@
 #include "../Inc/st7920.h"
 #include "../Inc/tim.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+
 /*******************************************************************
  * @name       :ST7920_SpiInit
  * @date       :2024-01-03
