@@ -61,7 +61,7 @@ int main(void)
 		
 		GPIO_DigitalWrite(GPIOB, 7, state);	
 		GPIO_DigitalWrite(GPIOB, 14, !state);	
-		//TIM_Wait(10);
+		TIM_Wait(10);
 		
 		if (count >= 10)
 		{
