@@ -125,7 +125,7 @@ static void MAIN_DisplayDate(void)
     // Calcul de la température
     float temperature = temp_msb + ((temp_lsb >> 6) * 0.25);
 	
-	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.2f degrees", temperature);
+	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: DS%.1f,US%.1f", temperature, temp);
 	SH1106_FontPrint(1, 7, 13, &Arial28x28, "%02d:%02d:%02d", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	USART_Serial_Print("%02d:%02d:%02d\r\n", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	SH1106_FontPrint(1, 0, 39, &Arial12x12, "%s,", days[DS3231_DayWeek]);
