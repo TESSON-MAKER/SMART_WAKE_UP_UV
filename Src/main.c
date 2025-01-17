@@ -5,7 +5,7 @@
 #include "gpio.h"
 #include "urm37.h"
 #include "usart.h"
-#include "esp01.h"
+//#include "esp01.h"
 
 const char *days[] = {"NA", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}; 
 const char *months[] = {"NA", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
@@ -39,7 +39,7 @@ int main(void)
 	BUTTONS_Init();
 	DS3231_Init();
 	URM37_Init();
-	ESP01_Usart_Init();
+	//ESP01_Usart_Init();
 	
 	GPIO_PinMode(GPIOB, 7, OUTPUT);
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
@@ -58,7 +58,7 @@ int main(void)
 	{
 		SH1106_ClearBuffer();
 		BUTTONS_KeyState();
-		ESP01_Send("test\r\n");
+		//ESP01_Send("test\r\n");
 		GPIO_DigitalWrite(GPIOB, 7, state);	
 		GPIO_DigitalWrite(GPIOB, 14, !state);	
 		TIM_Wait(50);

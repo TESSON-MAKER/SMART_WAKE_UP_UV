@@ -17,6 +17,7 @@ SMART_WAKE_UP.cbuild-idx.yml
 SMART_WAKE_UP.cproject.yml
 SMART_WAKE_UP_Target_1.sct
 tmp
+Target_1.cbuild-run.yml
 
 .clangd
 .vscode
