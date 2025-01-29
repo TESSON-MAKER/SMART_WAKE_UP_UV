@@ -1,16 +1,15 @@
-#include "../Inc/st7920.h"
-#include "../Inc/tim.h"
+#include "st7920.h"
+#include "tim.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
 /*******************************************************************
  * @name       :ST7920_SpiInit
- * @date       :2024-01-03
  * @function   :SPI Initialization
  * @parameters :None
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 static void ST7920_SpiInit(void)
 {
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // enable clock for GPIOA
@@ -65,11 +64,10 @@ static void ST7920_SpiInit(void)
 
 /*******************************************************************
  * @name       :ST7920_SpiTransmit
- * @date       :2024-05-26
  * @function   :Send with spi
  * @parameters :data
  * @retvalue   :None
-********************************************************************/
+ *******************************************************************/
 static void ST7920_SpiTransmit(uint8_t msg)
 {
 	//Wait until TXE is set
@@ -91,11 +89,10 @@ static void ST7920_SpiTransmit(uint8_t msg)
 
 /*******************************************************************
  * @name       :ST7920_SendCmd
- * @date       :2024-05-26
  * @function   :Send command
  * @parameters :cmd
  * @retvalue   :None
-********************************************************************/
+ *******************************************************************/
 static void ST7920_SendCmd(uint8_t cmd)
 {
 	ST7920_CS_HIGH;  
@@ -107,11 +104,10 @@ static void ST7920_SendCmd(uint8_t cmd)
 
 /*******************************************************************
  * @name       :ST7920_SendData
- * @date       :2024-05-26
  * @function   :Send data
  * @parameters :data
  * @retvalue   :None
-********************************************************************/
+ *******************************************************************/
 static void ST7920_SendData (uint8_t data)
 {
 	ST7920_CS_HIGH;  
@@ -123,11 +119,10 @@ static void ST7920_SendData (uint8_t data)
 
 /*******************************************************************
  * @name       :ST7920_SendString
- * @date       :2024-05-26
  * @function   :Send string
  * @parameters :row, col, string
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_SendString(int row, int col, char* string)
 {
 	switch (row)
@@ -155,38 +150,36 @@ void ST7920_SendString(int row, int col, char* string)
 
 /*******************************************************************
  * @name       :ST7920_GraphicMode
- * @date       :2024-05-26
  * @function   :Select graphic mode
  * @parameters :enable (1 or 0)
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_GraphicMode(int enable)
 {
 	if (enable)
 	{
 		ST7920_SendCmd(ST7920_CMD_BASIC);
-		TIM_Wait(1);
+		TIM1_WaitMilliseconds(1);
 		ST7920_SendCmd(ST7920_CMD_EXTEND);
-		TIM_Wait(1);
+		TIM1_WaitMilliseconds(1);
 		ST7920_SendCmd(ST7920_CMD_GFXMODE);
-		TIM_Wait(1);
+		TIM1_WaitMilliseconds(1);
 		Graphic_Check = 1;
 	}
 	else 
 	{
 		ST7920_SendCmd(ST7920_CMD_BASIC);
-		TIM_Wait(1);
+		TIM1_WaitMilliseconds(1);
 		Graphic_Check = 0;
 	}
 }
 
 /*******************************************************************
  * @name       :ST7920_SendBuffer
- * @date       :2024-06-01
  * @function   :Select graphic mode
  * @parameters :enable (1 or 0)
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_SendBuffer(void)
 {
 	for (uint8_t y = 0; y < 64; y++)
@@ -206,11 +199,10 @@ void ST7920_SendBuffer(void)
 
 /*******************************************************************
  * @name       : ST7920_SetPixel
- * @date       : 2024-06-01
  * @function   : Draw a character at specified position
  * @parameters : color, x, y, font, letterNumberAscii
  * @retvalue   : None
-********************************************************************/
+ *******************************************************************/
 void ST7920_SetPixel(uint8_t color, int16_t x, int16_t y) 
 {
 	if (x >= 0 && x < ST7920_WIDTH && y >= 0 && y < ST7920_HEIGHT) 
@@ -225,11 +217,10 @@ void ST7920_SetPixel(uint8_t color, int16_t x, int16_t y)
 
 /*******************************************************************
  * @name       : ST7920_DrawCharacter
- * @date       : 2024-01-03
  * @function   : Draw a character at specified position
  * @parameters : color, x, y, font, letterNumberAscii
  * @retvalue   : None
-********************************************************************/
+ *******************************************************************/
 void ST7920_DrawCharacter(uint8_t color, int16_t x, int16_t y, const Font *font, uint8_t letterNumberAscii) 
 {
 	if (letterNumberAscii < font->asciiBegin || letterNumberAscii > font->asciiEnd) return;
@@ -257,11 +248,10 @@ void ST7920_DrawCharacter(uint8_t color, int16_t x, int16_t y, const Font *font,
 
 /*******************************************************************
  * @name       : ST7920_DrawStr
- * @date       : 2024-01-03
  * @function   : Set pixel in buffer
  * @parameters : color, x, y, font, content
  * @retvalue   : None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_DrawStr(uint8_t color, int16_t x, int16_t y, const Font *font, const char *format)
 {
 	while (*format && x < ST7920_WIDTH && y < ST7920_HEIGHT) 
@@ -283,11 +273,10 @@ void ST7920_DrawStr(uint8_t color, int16_t x, int16_t y, const Font *font, const
 
 /*******************************************************************
  * @name       : ST7920_FontPrint
- * @date       : 2024-01-03
  * @function   : Set pixel in buffer
  * @parameters : color, x, y, font, content
  * @retvalue   : None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_FontPrint(uint8_t color, int16_t x, int16_t y, const Font *font, const char *format, ...) 
 {
 	va_list args;
@@ -301,11 +290,10 @@ void ST7920_FontPrint(uint8_t color, int16_t x, int16_t y, const Font *font, con
 
 /*******************************************************************
  * @name       :ST7920_DrawLine
- * @date       :2024-01-03
  * @function   :Draw a line
  * @parameters :color, x0, y0, x1, y1
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_DrawLine(uint8_t color, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) 
 {
 	int dx = (x1 >= x0) ? x1 - x0 : x0 - x1;
@@ -334,11 +322,10 @@ void ST7920_DrawLine(uint8_t color, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t 
 
 /*******************************************************************
  * @name       :ST7920_DrawRectangle
- * @date       :2024-01-03
  * @function   :Draw rectangle
  * @parameters :color, x, y, w, h
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_DrawRectangle(uint8_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
 	//Check input parameters
@@ -357,11 +344,10 @@ void ST7920_DrawRectangle(uint8_t color, uint16_t x, uint16_t y, uint16_t w, uin
 
 /*******************************************************************
  * @name       :ST7920_DrawFilledRectangle
- * @date       :2024-01-03
  * @function   :Draw rectangle
  * @parameters :color, x, y, w, h
  * @retvalue   :None
-********************************************************************/
+ *******************************************************************/
 void ST7920_DrawFilledRectangle(uint8_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
 	//Check input parameters
@@ -378,11 +364,10 @@ void ST7920_DrawFilledRectangle(uint8_t color, uint16_t x, uint16_t y, uint16_t 
 
 /*******************************************************************
  * @name       :ST7920_DrawCircle
- * @date       :2024-01-03
  * @function   :Draw circle
  * @parameters :color, x0, y0, radius
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_DrawCircle(uint8_t color, uint8_t x0, uint8_t y0, uint8_t radius)
 {
 	int x = radius;
@@ -418,11 +403,10 @@ void ST7920_DrawCircle(uint8_t color, uint8_t x0, uint8_t y0, uint8_t radius)
 
 /*******************************************************************
  * @name       :ST7920_DrawFilledCircle
- * @date       :2024-01-03
  * @function   :Draw filled circle
  * @parameters :color, x0, y0, radius
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_DrawFilledCircle(uint8_t color, int16_t x0, int16_t y0, int16_t r)
 {
 	int16_t f = 1 - r;
@@ -459,11 +443,10 @@ void ST7920_DrawFilledCircle(uint8_t color, int16_t x0, int16_t y0, int16_t r)
 
 /*******************************************************************
  * @name       :ST7920_ClearBuffer
- * @date       :2024-01-03
  * @function   :Clear buffer
  * @parameters :None
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_ClearBuffer(void)
 {
 	uint16_t bufferSize = (ST7920_WIDTH*ST7920_HEIGHT)/ST7920_DATA_SIZE;
@@ -473,51 +456,50 @@ void ST7920_ClearBuffer(void)
 
 /*******************************************************************
  * @name       :ST7920_Init
- * @date       :2024-01-03
  * @function   :Initialization of the component
  * @parameters :None
  * @retvalue   :None
-********************************************************************/ 
+ *******************************************************************/
 void ST7920_Init(void)
 {
 	// Wait 100ms
-	TIM_Wait(100);
+	TIM1_WaitMilliseconds(100);
 	// Initialize SPI link
 	ST7920_SpiInit();
 	// Reset LOW
 	ST7920_RST_LOW;
 	// Wait 50ms
-	TIM_Wait(50);
+	TIM1_WaitMilliseconds(50);
 	// Reset HIGH
 	ST7920_RST_HIGH;
 	// Wait 100ms
-	TIM_Wait(100);
+	TIM1_WaitMilliseconds(100);
 	// 8bit mode
 	ST7920_SendCmd(ST7920_CMD_BASIC);
 	// Wait >100us
-	TIM_WaitMicros(110);
+	TIM1_WaitMicroseconds(110);
 	// 8bit mode
 	ST7920_SendCmd(ST7920_CMD_BASIC);
 	// Wait >37us
-	TIM_WaitMicros(40);
+	TIM1_WaitMicroseconds(40);
 	// D=0, C=0, B=0 (Display OFF)
 	ST7920_SendCmd(ST7920_CMD_DISPLAYOFF);
 	// Wait >100us
-	TIM_WaitMicros(110);
+	TIM1_WaitMicroseconds(110);
 	// Clear screen
 	ST7920_SendCmd(ST7920_CMD_LCD_CLS);
 	// Wait >10ms
-	TIM_Wait(12);
+	TIM1_WaitMilliseconds(12);
 	// Cursor increment right, no shift
 	ST7920_SendCmd(ST7920_CMD_ADDRINC);
 	// Wait 1ms
-	TIM_Wait(1);
+	TIM1_WaitMilliseconds(1);
 	// D=1, C=0, B=0 (Display ON)
 	ST7920_SendCmd(ST7920_CMD_DISPLAYON);
 	// Wait 1ms
-	TIM_Wait(1);
+	TIM1_WaitMilliseconds(1);
 	// Return to home
 	ST7920_SendCmd(ST7920_CMD_HOME);
 	// Wait 1ms
-	TIM_Wait(1);
+	TIM1_WaitMilliseconds(1);
 }

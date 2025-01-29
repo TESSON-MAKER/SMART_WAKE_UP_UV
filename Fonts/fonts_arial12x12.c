@@ -2,7 +2,6 @@
 #define FONTS_ARIAL12X12_H_
 
 #include <stdint.h>
-
 #include "fonts.h"
 
 const uint8_t Arial12x12_Data[] =

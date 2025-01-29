@@ -2,7 +2,6 @@
 #define FONTS_ARIAL28X28_H_
 
 #include <stdint.h>
-
 #include "fonts.h"
 
 const uint8_t Arial28x28_Data[] =

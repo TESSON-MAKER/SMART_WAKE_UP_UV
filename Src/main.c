@@ -5,7 +5,6 @@
 #include "gpio.h"
 #include "urm37.h"
 #include "usart.h"
-//#include "esp01.h"
 
 const char *days[] = {"NA", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}; 
 const char *months[] = {"NA", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
@@ -22,7 +21,9 @@ static int8_t DS3231_Century = 0;
 static uint8_t UpdateToDisplay = 0;
 static uint8_t UpdateToSetting = 0;
 
-float temp = 0;
+float temp = 0.0;
+
+int value = 0;
 
 int move = 0;
 static uint8_t state = 0;
@@ -32,17 +33,18 @@ static void MAIN_Settings(void);
 
 int main(void) 
 {
+	TIM1_InitForDelay();
 	SH1106_Init();
 	SH1106_ClearBuffer();
 	USART_Serial_Begin(9600); 
-	//SH1106_GraphicMode(1);
 	BUTTONS_Init();
 	DS3231_Init();
 	URM37_Init();
-	//ESP01_Usart_Init();
-	
+	//ESP01_UsartInit();
+
 	GPIO_PinMode(GPIOB, 7, OUTPUT);
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
+
 	uint8_t dataI[7] = {
 			DS3231_DEC_BCD(0),
 			DS3231_DEC_BCD(55),
@@ -52,18 +54,20 @@ int main(void)
 			DS3231_DEC_BCD(3),
 			DS3231_DEC_BCD(1)};
 
-	DS3231_Write(0x00, dataI, 7, 2000);
-	
+	DS3231_Write(0x00, dataI, 7);
+
 	while (1) 
 	{
 		SH1106_ClearBuffer();
 		BUTTONS_KeyState();
-		//ESP01_Send("test\r\n");
 		GPIO_DigitalWrite(GPIOB, 7, state);	
 		GPIO_DigitalWrite(GPIOB, 14, !state);	
-		TIM_Wait(50);
-		URM37_Measure(URM37_Temperature);
-		temp = URM37_GetTemperature();
+		TIM1_WaitMilliseconds(50);
+
+		/*uint32_t current_time = ETH_Get_Current_Time();
+		USART_Serial_Print("%lu\r\n", current_time);*/
+		/*URM37_Measure(URM37_Temperature);
+		temp = URM37_GetTemperature();*/
 		
 		switch (BUTTON_Switch)
 		{
@@ -75,7 +79,7 @@ int main(void)
 				break;
 		}
 		state ^= 1;
-		
+
 		SH1106_SendBuffer();
 	}
 }
@@ -87,7 +91,7 @@ static void MAIN_DisplayDate(void)
 	if (UpdateToDisplay)
 	{
 		uint8_t dataS[7] = {DS3231_DEC_BCD(DS3231_Second), DS3231_DEC_BCD(DS3231_Minute), DS3231_DEC_BCD(DS3231_Hour), DS3231_DEC_BCD(DS3231_DayWeek), DS3231_DEC_BCD(DS3231_DayMonth), DS3231_DEC_BCD(DS3231_Month), DS3231_DEC_BCD(DS3231_Year)};
-		DS3231_Write(0x00, dataS, 7, 2000);
+		DS3231_Write(0x00, dataS, 7);
 		
 		BUTTON_TopState = 0;
 		BUTTON_BottomState = 0;
@@ -99,7 +103,7 @@ static void MAIN_DisplayDate(void)
 	}
 	
 	uint8_t data[7] = {0};
-	DS3231_Read(0x0,data,7, 2000);
+	DS3231_Read(0x0,data,7);
 	DS3231_Second = DS3231_BCD_DEC(data[0] & 0x7F);
 	DS3231_Minute = DS3231_BCD_DEC(data[1]);
 	DS3231_Hour = DS3231_BCD_DEC(data[2] & 0x3F);
@@ -109,16 +113,15 @@ static void MAIN_DisplayDate(void)
 	DS3231_Year = DS3231_BCD_DEC(data[6]);
 	DS3231_Century = DS3231_BCD_DEC(data[5] & 0x80);
 	
-	/*Test température*/
 	uint8_t data_temp[2] = {0};
-	DS3231_Read(0x11, data_temp, 2, 10000);
+	DS3231_Read(0x11, data_temp, 2);
 	int8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
-    uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
+	uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
 
-    // Calcul de la température
-    float temperature = temp_msb + ((temp_lsb >> 6) * 0.25);
-	
-	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: DS%.1f,US%.1f", temperature, temp);
+	// Calcul de la température
+	float temperature = temp_msb + ((temp_lsb >> 6) * 0.25);
+
+	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.1f", temperature);
 	SH1106_FontPrint(1, 7, 13, &Arial28x28, "%02d:%02d:%02d", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	USART_Serial_Print("%02d:%02d:%02d\r\n", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	SH1106_FontPrint(1, 0, 39, &Arial12x12, "%s,", days[DS3231_DayWeek]);
