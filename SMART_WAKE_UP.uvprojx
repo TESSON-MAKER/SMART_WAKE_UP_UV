@@ -450,11 +450,6 @@
               <FilePath>.\Inc\gpio.h</FilePath>
             </File>
             <File>
-              <FileName>servo.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Inc\servo.h</FilePath>
-            </File>
-            <File>
               <FileName>sh1106.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Inc\sh1106.h</FilePath>
