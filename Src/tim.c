@@ -1,4 +1,4 @@
-#include "tim.h"
+#include "../Inc/tim.h"
 
 /*******************************************************************
  * @name       :TIM1_InitForDelay

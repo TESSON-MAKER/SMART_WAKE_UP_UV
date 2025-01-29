@@ -1,5 +1,5 @@
-#include "st7920.h"
-#include "tim.h"
+#include "../Inc/st7920.h"
+#include "../Inc/tim.h"
 
 #include <stdarg.h>
 #include <stdio.h>

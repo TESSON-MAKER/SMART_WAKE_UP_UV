@@ -1,5 +1,6 @@
-#include "sh1106.h"
-#include "tim.h"
+#include "../Inc/sh1106.h"
+#include "../Inc/tim.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 

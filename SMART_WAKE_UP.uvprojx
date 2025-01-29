@@ -405,11 +405,6 @@
               <FilePath>.\Src\main.c</FilePath>
             </File>
             <File>
-              <FileName>servo.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Src\servo.c</FilePath>
-            </File>
-            <File>
               <FileName>sh1106.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Src\sh1106.c</FilePath>
