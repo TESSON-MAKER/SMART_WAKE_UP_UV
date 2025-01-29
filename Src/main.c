@@ -115,13 +115,16 @@ static void MAIN_DisplayDate(void)
 	
 	uint8_t data_temp[2] = {0};
 	DS3231_Read(0x11, data_temp, 2);
-	int8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
+	uint8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
 	uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
 
 	// Calcul de la température
-	float temperature = temp_msb + ((temp_lsb >> 6) * 0.25);
+	int16_t value = (temp_msb << 8) | temp_lsb;
+  	value = (value >> 6);
 
-	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.1f", temperature);
+	float temperature = value / 4.0f;
+	
+	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.2f", temperature);
 	SH1106_FontPrint(1, 7, 13, &Arial28x28, "%02d:%02d:%02d", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	USART_Serial_Print("%02d:%02d:%02d\r\n", DS3231_Hour, DS3231_Minute, DS3231_Second);
 	SH1106_FontPrint(1, 0, 39, &Arial12x12, "%s,", days[DS3231_DayWeek]);
