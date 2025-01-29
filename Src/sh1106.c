@@ -473,9 +473,9 @@ void SH1106_Init(void)
 	// Set display start line (first line displayed)
 	SH1106_SendCmd(SH1106_CMD_STARTLINE); 
 	// Set segment re-map (X coordinate)
-	SH1106_SendCmd(SH1106_CMD_SEG_NORM);
+	SH1106_SendCmd(SH1106_CMD_SEG_INV);
 	// Set COM output scan direction (Y coordinate)
-	SH1106_SendCmd(SH1106_CMD_COM_NORM);
+	SH1106_SendCmd(SH1106_CMD_COM_INV);
 	// Set COM pins hardware configuration
 	SH1106_SendDoubleCmd(SH1106_CMD_COM_HW, 0x12);
 	// Set contrast control
