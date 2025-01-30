@@ -1,11 +1,11 @@
 #include "../Inc/buttons.h"
 
 // Delay values for button press detection
-#define TIM2_PRESCALER_VALUE 16000
-#define TIM2_PUSH_DELAY_VALUE 500
-#define TIM2_INCREMENT_DELAY_VALUE 200
+#define TIM3_PRESCALER_VALUE 16000
+#define TIM3_PUSH_DELAY_VALUE 500
+#define TIM3_INCREMENT_DELAY_VALUE 200
 
-#define RESET_TIM2_COUNTER TIM2->CNT = 0
+#define RESET_TIM3_COUNTER TIM3->CNT = 0
 
 // Global variables to store button states
 volatile uint8_t BUTTON_TopState = 0;
@@ -68,22 +68,21 @@ static void BUTTONS_InitInterrupts(void)
 	NVIC_EnableIRQ(EXTI3_IRQn);
 }
 
-// Initialize TIM2 for button repetition
-static void BUTTONS_InitTIM2(void)
+// Initialize TIM3 for button repetition
+static void BUTTONS_InitTIM3(void)
 {
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN; // Enable TIM2
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3
 
-	TIM2->PSC = TIM2_PRESCALER_VALUE - 1; // Set prescaler
-	TIM2->ARR = TIM2_PUSH_DELAY_VALUE - 1; // Set auto-reload value
+	TIM3->PSC = TIM3_PRESCALER_VALUE - 1; // Set prescaler
+	TIM3->ARR = TIM3_PUSH_DELAY_VALUE - 1; // Set auto-reload value
 
-	TIM2->DIER |= TIM_DIER_UIE; // Enable update interrupt
-	TIM2->CR1 |= TIM_CR1_CMS_1;
-	TIM2->CR1 &= ~TIM_CR1_CMS_0;
-	TIM2->CR1 |= TIM_CR1_CEN; // Activate the timer
+	TIM3->DIER |= TIM_DIER_UIE; // Enable update interrupt
+	TIM3->CR1 |= TIM_CR1_CMS_1;
+	TIM3->CR1 &= ~TIM_CR1_CMS_0;
+	TIM3->CR1 |= TIM_CR1_CEN; // Activate the timer
 
-
-	NVIC_SetPriority(TIM2_IRQn, 4); // Set TIM2 interrupt priority
-	NVIC_EnableIRQ(TIM2_IRQn); // Enable TIM2 interrupt in NVIC
+	NVIC_SetPriority(TIM3_IRQn, 4); // Set TIM3 interrupt priority
+	NVIC_EnableIRQ(TIM3_IRQn); // Enable TIM3 interrupt in NVIC
 }
 
 // EXTI interrupt handler for Top Button
@@ -91,7 +90,7 @@ void EXTI15_10_IRQHandler(void)
 {
 	if (EXTI->PR & EXTI_PR_PR11)
 	{
-		RESET_TIM2_COUNTER; // Reset TIM2 counter
+		RESET_TIM3_COUNTER; // Reset TIM3 counter
 		EXTI->PR |= EXTI_PR_PR11; // Clear interrupt flag
 		BUTTON_TopState = 1; // Set Top Button state
 		begin = 1;
@@ -103,7 +102,7 @@ void EXTI2_IRQHandler(void)
 {
 	if (EXTI->PR & EXTI_PR_PR2)
 	{
-		RESET_TIM2_COUNTER; // Reset TIM2 counter
+		RESET_TIM3_COUNTER; // Reset TIM3 counter
 		EXTI->PR |= EXTI_PR_PR2; // Clear interrupt flag
 		BUTTON_BottomState = 1; // Set Right Button state
 		begin = 1;
@@ -136,20 +135,20 @@ void BUTTONS_KeyState(void)
 	BUTTON_Switch = (GPIOE->IDR & GPIO_IDR_ID0) ? 1 : 0;
 }
 
-// TIM2 interrupt handler for button repetition and hold detection
-void TIM2_IRQHandler(void)
+// TIM3 interrupt handler for button repetition and hold detection
+void TIM3_IRQHandler(void)
 {
-	if (TIM2->SR & TIM_SR_UIF) // Check if update interrupt flag is set
+	if (TIM3->SR & TIM_SR_UIF) // Check if update interrupt flag is set
 	{
-		TIM2->SR &= ~TIM_SR_UIF; // Clear update interrupt flag
+		TIM3->SR &= ~TIM_SR_UIF; // Clear update interrupt flag
 
 		if ((GPIOD->IDR & GPIO_IDR_ID11) && !(GPIOE->IDR & GPIO_IDR_ID2))
 		{
 			BUTTON_TopState = 1; // Top button pressed
 			if (begin) // If this is the first time you press and hold the button
 			{
-				TIM2->ARR = TIM2_INCREMENT_DELAY_VALUE - 1; // Set auto-reload value for repetition
-				begin = 0; //We leave the case of the first prolonged press on the button.
+				TIM3->ARR = TIM3_INCREMENT_DELAY_VALUE - 1; // Set auto-reload value for repetition
+				begin = 0; // We leave the case of the first prolonged press on the button.
 			}
 		}
 		else if ((GPIOE->IDR & GPIO_IDR_ID2) && !(GPIOD->IDR & GPIO_IDR_ID11))
@@ -157,18 +156,18 @@ void TIM2_IRQHandler(void)
 			BUTTON_BottomState = 1; // Bottom button pressed
 			if (begin) // If this is the first time you press and hold the button
 			{
-				TIM2->ARR = TIM2_INCREMENT_DELAY_VALUE - 1; // Set auto-reload value for repetition
-				begin = 0; //We leave the case of the first prolonged press on the button.
+				TIM3->ARR = TIM3_INCREMENT_DELAY_VALUE - 1; // Set auto-reload value for repetition
+				begin = 0; // We leave the case of the first prolonged press on the button.
 			}
 		}
 		else
 		{
 			// None or all buttons pressed
-			TIM2->ARR = TIM2_PUSH_DELAY_VALUE - 1; // Set auto-reload value for repetition
+			TIM3->ARR = TIM3_PUSH_DELAY_VALUE - 1; // Set auto-reload value for repetition
 			BUTTON_TopState = 0;
 			BUTTON_BottomState = 0;
 		}
-		RESET_TIM2_COUNTER; // Reset TIM2 counter
+		RESET_TIM3_COUNTER; // Reset TIM3 counter
 	}
 }
 
@@ -177,5 +176,5 @@ void BUTTONS_Init(void)
 {
 	BUTTONS_InitGPIO();
 	BUTTONS_InitInterrupts();
-	BUTTONS_InitTIM2();
+	BUTTONS_InitTIM3();
 }

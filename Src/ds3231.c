@@ -121,6 +121,7 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
         }
     }
 
+		USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
     return 0;
@@ -168,9 +169,7 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     }
 
     // Disable I2C1 after transmission
-    int test = 0;
-    test = TIM2_GetCounterValue();
-    USART_Serial_Print("%d\r\n", test);
+    USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
     return 0;
