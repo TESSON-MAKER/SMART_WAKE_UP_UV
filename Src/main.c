@@ -54,7 +54,10 @@ int main(void)
 			DS3231_DEC_BCD(3),
 			DS3231_DEC_BCD(1)};
 
-	DS3231_Write(0x00, dataI, 7);
+	if (DS3231_Write(0x00, dataI, 7, 10000))
+	{
+		while(1);
+	}
 
 	while (1) 
 	{
@@ -63,11 +66,6 @@ int main(void)
 		GPIO_DigitalWrite(GPIOB, 7, state);	
 		GPIO_DigitalWrite(GPIOB, 14, !state);	
 		TIM1_WaitMilliseconds(50);
-
-		/*uint32_t current_time = ETH_Get_Current_Time();
-		USART_Serial_Print("%lu\r\n", current_time);*/
-		/*URM37_Measure(URM37_Temperature);
-		temp = URM37_GetTemperature();*/
 		
 		switch (BUTTON_Switch)
 		{
@@ -91,7 +89,11 @@ static void MAIN_DisplayDate(void)
 	if (UpdateToDisplay)
 	{
 		uint8_t dataS[7] = {DS3231_DEC_BCD(DS3231_Second), DS3231_DEC_BCD(DS3231_Minute), DS3231_DEC_BCD(DS3231_Hour), DS3231_DEC_BCD(DS3231_DayWeek), DS3231_DEC_BCD(DS3231_DayMonth), DS3231_DEC_BCD(DS3231_Month), DS3231_DEC_BCD(DS3231_Year)};
-		DS3231_Write(0x00, dataS, 7);
+		
+		if (DS3231_Write(0x00, dataS, 7, 10000))
+		{
+			while(1);
+		}
 		
 		BUTTON_TopState = 0;
 		BUTTON_BottomState = 0;
@@ -103,7 +105,11 @@ static void MAIN_DisplayDate(void)
 	}
 	
 	uint8_t data[7] = {0};
-	DS3231_Read(0x0,data,7);
+	if (DS3231_Read(0x0,data,7, 10000))
+	{
+		while(1);
+	};
+
 	DS3231_Second = DS3231_BCD_DEC(data[0] & 0x7F);
 	DS3231_Minute = DS3231_BCD_DEC(data[1]);
 	DS3231_Hour = DS3231_BCD_DEC(data[2] & 0x3F);
@@ -114,7 +120,7 @@ static void MAIN_DisplayDate(void)
 	DS3231_Century = DS3231_BCD_DEC(data[5] & 0x80);
 	
 	uint8_t data_temp[2] = {0};
-	DS3231_Read(0x11, data_temp, 2);
+	DS3231_Read(0x11, data_temp, 2, 10000);
 	uint8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
 	uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
 

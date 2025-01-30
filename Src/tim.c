@@ -21,7 +21,7 @@ void TIM1_InitForDelay(void)
 void TIM2_InitForGeneralPurpose(void)
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;   // Enable Timer 2 clock
-	TIM2->PSC = TIM_PSC_MILLISECONDS;     // Prescaler for 1 MHz (1 us per tick with a 16 MHz clock)
+	TIM2->PSC = TIM_PSC_MICROSECONDS;     // Prescaler for 1 MHz (1 us per tick with a 16 MHz clock)
 	TIM2->CR1 |= TIM_CR1_OPM;             // One-Pulse Mode (stops after expiration)
 }
 

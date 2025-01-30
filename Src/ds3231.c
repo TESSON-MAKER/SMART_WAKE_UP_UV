@@ -1,4 +1,6 @@
 #include "../Inc/ds3231.h"
+#include "../Inc/tim.h"
+#include "../Inc/usart.h"
 
 /*******************************************************************
  * @name       :DS3231_Init
@@ -14,19 +16,15 @@ void DS3231_Init(void)
     // Configure GPIOB Pin 8 as alternate function
     GPIOB->MODER |= GPIO_MODER_MODER8_1; // Set mode to alternate function
     GPIOB->MODER &= ~GPIO_MODER_MODER8_0; // Clear mode bits
+    GPIOB->AFR[1] |= DS3231_I2C1_AF << GPIO_AFRH_AFRH0_Pos; //Alternante funtion for PB8
+    GPIOB->OTYPER |= GPIO_OTYPER_OT8; // Set Pin 8 to open-drain
 
     // Configure GPIOB Pin 9 as alternate function
     GPIOB->MODER |= GPIO_MODER_MODER9_1; // Set mode to alternate function
     GPIOB->MODER &= ~GPIO_MODER_MODER9_0; // Clear mode bits
-
-    // Set GPIOB Pin 8 and Pin 9 to open-drain mode
-    GPIOB->OTYPER |= GPIO_OTYPER_OT8; // Set Pin 8 to open-drain
+    GPIOB->AFR[1] |= DS3231_I2C1_AF << GPIO_AFRH_AFRH1_Pos; //Alternante funtion for PB9
     GPIOB->OTYPER |= GPIO_OTYPER_OT9; // Set Pin 9 to open-drain
-
-    // Set alternate function for GPIOB Pin 8 and Pin 9 to I2C1
-    GPIOB->AFR[1] |= DS3231_I2C1_AF << GPIO_AFRH_AFRH0_Pos;
-    GPIOB->AFR[1] |= DS3231_I2C1_AF << GPIO_AFRH_AFRH1_Pos;
-
+    
     // Enable I2C1 clock
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
@@ -35,6 +33,8 @@ void DS3231_Init(void)
 
     // Set I2C timing register (standard or fast mode)
     I2C1->TIMINGR = 0x0000C1C1; // Configure timing for I2C
+
+    TIM2_InitForGeneralPurpose();
 }
 
 /*******************************************************************
@@ -65,7 +65,7 @@ int DS3231_DEC_BCD(unsigned char x)
  * @parameters :None
  * @retvalue   :Converted value
  *******************************************************************/
-void DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length)
+int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
 {
     // Enable I2C
     I2C1->CR1 |= I2C_CR1_PE;
@@ -78,9 +78,18 @@ void DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length)
     I2C1->CR2 &= ~I2C_CR2_AUTOEND; // Software end
     I2C1->CR2 |= I2C_CR2_START; // Generate start
 
+    TIM2_ResetCounter();
+    TIM2_StartTimer();
+
     while (!(I2C1->ISR & I2C_ISR_TC)) // Wait until transfer complete
     {
-
+        // If timeout, return 1
+        if (TIM2_GetCounterValue() > timeout)
+        {
+            TIM2_StopTimer();
+            return 1;
+        }
+                
         // If TX buffer is empty, send the memory address
         if (I2C1->ISR & I2C_ISR_TXE)
         {
@@ -99,6 +108,12 @@ void DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length)
 
     while (!(I2C1->ISR & I2C_ISR_STOPF))
     {
+        if (TIM2_GetCounterValue() > timeout)
+        {
+            TIM2_StopTimer();
+            return 1;
+        }
+
         // If RX buffer is not empty
         if (I2C1->ISR & I2C_ISR_RXNE)
         {
@@ -106,8 +121,9 @@ void DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length)
         }
     }
 
-    // Disable the peripheral
+    TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
+    return 0;
 }
 
 /*******************************************************************
@@ -116,7 +132,7 @@ void DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length)
  * @parameters :memadd, data, length, timeout
  * @retvalue   :None
  *******************************************************************/
-void DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length)
+int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
 {
     // Enable I2C1 peripheral
     I2C1->CR1 |= I2C_CR1_PE;
@@ -132,10 +148,17 @@ void DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length)
 
     // Send memory address and data
     int i = 0;  // Initialize index for data
+    TIM2_ResetCounter();
+    TIM2_StartTimer();
 
     // Wait for stop condition or timeout
     while (!(I2C1->ISR & I2C_ISR_STOPF))
     {
+        if (TIM2_GetCounterValue() > timeout)
+        {
+            TIM2_StopTimer();
+            return 1;
+        }
         // If transmit buffer is empty, send memory address or data
         if (I2C1->ISR & I2C_ISR_TXE)
         {
@@ -145,5 +168,10 @@ void DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length)
     }
 
     // Disable I2C1 after transmission
+    int test = 0;
+    test = TIM2_GetCounterValue();
+    USART_Serial_Print("%d\r\n", test);
+    TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
+    return 0;
 }
