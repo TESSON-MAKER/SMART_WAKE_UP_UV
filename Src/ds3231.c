@@ -64,7 +64,7 @@ int DS3231_BcdToDec(unsigned char x)
 }
 
 /*******************************************************************
- * @name       :DS3231_DEC_BCD
+ * @name       :DS3231_DecToBcd
  * @function   :Convert decimal to BCD
  * @parameters :None
  * @retvalue   :Converted value
