@@ -47,15 +47,15 @@ int main(void)
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
 	
 	uint8_t dataI[7] = {
-			DS3231_DEC_BCD(0),
-			DS3231_DEC_BCD(55),
-			DS3231_DEC_BCD(21),
-			DS3231_DEC_BCD(6),
-			DS3231_DEC_BCD(10),
-			DS3231_DEC_BCD(3),
-			DS3231_DEC_BCD(1)};
+			DS3231_DecToBcd(0),
+			DS3231_DecToBcd(55),
+			DS3231_DecToBcd(21),
+			DS3231_DecToBcd(6),
+			DS3231_DecToBcd(10),
+			DS3231_DecToBcd(3),
+			DS3231_DecToBcd(1)};
 
-	if (DS3231_Write(0x00, dataI, 7, 100))
+	if (DS3231_Write(0x00, dataI, 7, 100000))
 	{
 		while(1);
 	}
@@ -89,9 +89,9 @@ static void MAIN_DisplayDate(void)
 	
 	if (UpdateToDisplay)
 	{
-		uint8_t dataS[7] = {DS3231_DEC_BCD(DS3231_Second), DS3231_DEC_BCD(DS3231_Minute), DS3231_DEC_BCD(DS3231_Hour), DS3231_DEC_BCD(DS3231_DayWeek), DS3231_DEC_BCD(DS3231_DayMonth), DS3231_DEC_BCD(DS3231_Month), DS3231_DEC_BCD(DS3231_Year)};
+		uint8_t dataS[7] = {DS3231_DecToBcd(DS3231_Second), DS3231_DecToBcd(DS3231_Minute), DS3231_DecToBcd(DS3231_Hour), DS3231_DecToBcd(DS3231_DayWeek), DS3231_DecToBcd(DS3231_DayMonth), DS3231_DecToBcd(DS3231_Month), DS3231_DecToBcd(DS3231_Year)};
 		
-		if (DS3231_Write(0x00, dataS, 7, 100))
+		if (DS3231_Write(0x00, dataS, 7, 100000))
 		{
 			while(1);
 		}
@@ -106,38 +106,40 @@ static void MAIN_DisplayDate(void)
 	}
 	
 	uint8_t data[7] = {0};
-	if (DS3231_Read(0x0,data,7, 100))
-	{
-		while(1);
-	};
-
-	DS3231_Second = DS3231_BCD_DEC(data[0] & 0x7F);
-	DS3231_Minute = DS3231_BCD_DEC(data[1]);
-	DS3231_Hour = DS3231_BCD_DEC(data[2] & 0x3F);
-	DS3231_DayWeek = DS3231_BCD_DEC(data[3]);
-	DS3231_DayMonth = DS3231_BCD_DEC(data[4]);
-	DS3231_Month = DS3231_BCD_DEC(data[5]);
-	DS3231_Year = DS3231_BCD_DEC(data[6]);
-	DS3231_Century = DS3231_BCD_DEC(data[5] & 0x80);
-	
 	uint8_t data_temp[2] = {0};
-	DS3231_Read(0x11, data_temp, 2, 100);
-	uint8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
-	uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
+	if (DS3231_Read(0x0,data,7, 3000)
+	 || DS3231_Read(0x11, data_temp, 2, 1500))
+	{
+		SH1106_FontPrint(1, 7, 13, &Arial12x12, "E:DS3231");
+	}
+	else 
+	{
+		DS3231_Second = DS3231_BcdToDec(data[0] & 0x7F);
+		DS3231_Minute = DS3231_BcdToDec(data[1]);
+		DS3231_Hour = DS3231_BcdToDec(data[2] & 0x3F);
+		DS3231_DayWeek = DS3231_BcdToDec(data[3]);
+		DS3231_DayMonth = DS3231_BcdToDec(data[4]);
+		DS3231_Month = DS3231_BcdToDec(data[5]);
+		DS3231_Year = DS3231_BcdToDec(data[6]);
+		DS3231_Century = DS3231_BcdToDec(data[5] & 0x80);
+		
+		uint8_t temp_msb = data_temp[0]; // MSB à l'adresse 0x11
+		uint8_t temp_lsb = data_temp[1]; // LSB à l'adresse 0x12
 
-	// Calcul de la température
-	int16_t value = (temp_msb << 8) | temp_lsb;
-  	value = (value >> 6);
+		// Calcul de la température
+		int16_t value = (temp_msb << 8) | temp_lsb;
+		value = (value >> 6);
 
-	float temperature = value / 4.0f;
-	
-	SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.2f", temperature);
-	SH1106_FontPrint(1, 7, 13, &Arial28x28, "%02d:%02d:%02d", DS3231_Hour, DS3231_Minute, DS3231_Second);
-	USART_Serial_Print("%02d:%02d:%02d\r\n", DS3231_Hour, DS3231_Minute, DS3231_Second);
-	SH1106_FontPrint(1, 0, 39, &Arial12x12, "%s,", days[DS3231_DayWeek]);
-	SH1106_FontPrint(1, 0, 52, &Arial12x12, "%s %d, 2%d%02d", months[DS3231_Month], DS3231_DayMonth, DS3231_Century, DS3231_Year);
-	SH1106_DrawLine(1, 0, 37, 131, 37);
-	SH1106_DrawLine(1, 0, 12, 131, 12);
+		float temperature = value / 4.0f;
+		
+		SH1106_FontPrint(1, 0, 0, &Arial12x12, "Temp: %.2f", temperature);
+		SH1106_FontPrint(1, 7, 13, &Arial28x28, "%02d:%02d:%02d", DS3231_Hour, DS3231_Minute, DS3231_Second);
+		//USART_Serial_Print("%02d:%02d:%02d\r\n", DS3231_Hour, DS3231_Minute, DS3231_Second);
+		SH1106_FontPrint(1, 0, 39, &Arial12x12, "%s,", days[DS3231_DayWeek]);
+		SH1106_FontPrint(1, 0, 52, &Arial12x12, "%s %d, 2%d%02d", months[DS3231_Month], DS3231_DayMonth, DS3231_Century, DS3231_Year);
+		SH1106_DrawLine(1, 0, 37, 131, 37);
+		SH1106_DrawLine(1, 0, 12, 131, 12);
+	}
 }
 
 static void handling(int8_t* data, const char* title, int max, int min)

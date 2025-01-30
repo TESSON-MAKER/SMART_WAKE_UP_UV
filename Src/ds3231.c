@@ -3,12 +3,12 @@
 #include "../Inc/usart.h"
 
 /*******************************************************************
- * @name       :DS3231_Init
- * @function   :DS3231 Initialization
+ * @name       :DS3231_GPIO_Config
+ * @function   :Configure GPIO
  * @parameters :None
  * @retvalue   :None
-********************************************************************/
-void DS3231_Init(void)
+ *******************************************************************/
+static void DS3231_GPIO_Config(void)
 {
     // Enable GPIOB clock
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
@@ -24,26 +24,41 @@ void DS3231_Init(void)
     GPIOB->MODER &= ~GPIO_MODER_MODER9_0; // Clear mode bits
     GPIOB->AFR[1] |= DS3231_I2C1_AF << GPIO_AFRH_AFRH1_Pos; //Alternante funtion for PB9
     GPIOB->OTYPER |= GPIO_OTYPER_OT9; // Set Pin 9 to open-drain
-    
-    // Enable I2C1 clock
+}
+
+/*******************************************************************
+ * @name       :DS3231_I2C_Config
+ * @function   :Configure I2C
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+static void DS3231_I2C_Config(void)
+{
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
-
-    // Disable I2C1 before configuring it
     I2C1->CR1 &= ~I2C_CR1_PE;
+    I2C1->TIMINGR = 0x0000C1C1;
+}
 
-    // Set I2C timing register (standard or fast mode)
-    I2C1->TIMINGR = 0x0000C1C1; // Configure timing for I2C
-
+/*******************************************************************
+ * @name       :DS3231_Init
+ * @function   :DS3231 Initialization
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+void DS3231_Init(void)
+{
+    DS3231_GPIO_Config();
+    DS3231_I2C_Config();
     TIM2_InitForGeneralPurpose();
 }
 
 /*******************************************************************
- * @name       :DS3231_BCD_DEC
+ * @name       :DS3231_BcdToBec
  * @function   :Convert BCD to decimal
  * @parameters :None
  * @retvalue   :Converted value
-********************************************************************/
-int DS3231_BCD_DEC(unsigned char x)
+ *******************************************************************/
+int DS3231_BcdToDec(unsigned char x)
 {
     return x - 6 * (x >> 4);
 }
@@ -54,7 +69,7 @@ int DS3231_BCD_DEC(unsigned char x)
  * @parameters :None
  * @retvalue   :Converted value
  *******************************************************************/
-int DS3231_DEC_BCD(unsigned char x)
+int DS3231_DecToBcd(unsigned char x)
 {
     return x + 6 * (x / 10);
 }
@@ -83,11 +98,11 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
 
     while (!(I2C1->ISR & I2C_ISR_TC)) // Wait until transfer complete
     {
-        // If timeout, return 1
+        // If timeout, return DS3231_TIMEOUT_ERROR
         if (TIM2_GetCounterValue() > timeout)
         {
             TIM2_StopTimer();
-            return 1;
+            return DS3231_TIMEOUT_ERROR;
         }
                 
         // If TX buffer is empty, send the memory address
@@ -111,7 +126,7 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
         if (TIM2_GetCounterValue() > timeout)
         {
             TIM2_StopTimer();
-            return 1;
+            return DS3231_TIMEOUT_ERROR;
         }
 
         // If RX buffer is not empty
@@ -121,10 +136,9 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
         }
     }
 
-		USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
-    return 0;
+    return DS3231_SUCCESS;
 }
 
 /*******************************************************************
@@ -158,7 +172,7 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
         if (TIM2_GetCounterValue() > timeout)
         {
             TIM2_StopTimer();
-            return 1;
+            return DS3231_TIMEOUT_ERROR;
         }
         // If transmit buffer is empty, send memory address or data
         if (I2C1->ISR & I2C_ISR_TXE)
@@ -172,5 +186,5 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
-    return 0;
+    return DS3231_SUCCESS;
 }
