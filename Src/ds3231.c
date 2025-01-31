@@ -1,5 +1,6 @@
 #include "../Inc/ds3231.h"
 #include "../Inc/tim.h"
+#include "../Inc/usart.h"
 
 /*******************************************************************
  * @name       :DS3231_GPIO_Config
@@ -87,31 +88,27 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     // Set slave address for write operation
     I2C1->CR2 = (DS3231_I2C_ADDRESS << 1); // Set slave address
     I2C1->CR2 &= ~I2C_CR2_ADD10; // 7-bit addressing
-    I2C1->CR2 |= (1 << I2C_CR2_NBYTES_Pos); // 1 byte to write (memory address)
-    I2C1->CR2 &= ~I2C_CR2_RD_WRN; // Write mode
-    I2C1->CR2 |= I2C_CR2_START; // Generate start condition
+    I2C1->CR2 |= (1 << I2C_CR2_NBYTES_Pos); // Set number to transfer to 1 for write operation
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN; // Set the mode to write mode
+    I2C1->CR2 &= ~I2C_CR2_AUTOEND; // Software end
+    I2C1->CR2 |= I2C_CR2_START; // Generate start
 
     TIM2_ResetCounter();
     TIM2_StartTimer();
 
-    // Wait for memory address transmission
-    while (!(I2C1->ISR & I2C_ISR_TXIS))
+    while (!(I2C1->ISR & I2C_ISR_TC)) // Wait until transfer complete
     {
+        // If timeout, return DS3231_TIMEOUT_ERROR
         if (TIM2_GetCounterValue() > timeout)
         {
             TIM2_StopTimer();
             return DS3231_TIMEOUT_ERROR;
         }
-    }
-    I2C1->TXDR = memadd;
-
-    // Wait for transfer completion
-    while (!(I2C1->ISR & I2C_ISR_TC))
-    {
-        if (TIM2_GetCounterValue() > timeout)
+                
+        // If TX buffer is empty, send the memory address
+        if (I2C1->ISR & I2C_ISR_TXE)
         {
-            TIM2_StopTimer();
-            return DS3231_TIMEOUT_ERROR;
+            I2C1->TXDR = memadd;
         }
     }
 
@@ -124,26 +121,18 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     I2C1->CR2 |= I2C_CR2_AUTOEND; // Auto-generate stop after transfer is completed
     I2C1->CR2 |= I2C_CR2_START; // Generate start
 
-    for (uint8_t i = 0; i < length; i++)
-    {
-        while (!(I2C1->ISR & I2C_ISR_RXNE)) // Wait for data
-        {
-            if (TIM2_GetCounterValue() > timeout)
-            {
-                TIM2_StopTimer();
-                return DS3231_TIMEOUT_ERROR;
-            }
-        }
-        data[i] = I2C1->RXDR; // Read data
-    }
-
-    // Wait for STOP condition
     while (!(I2C1->ISR & I2C_ISR_STOPF))
     {
         if (TIM2_GetCounterValue() > timeout)
         {
             TIM2_StopTimer();
             return DS3231_TIMEOUT_ERROR;
+        }
+
+        // If RX buffer is not empty
+        if (I2C1->ISR & I2C_ISR_RXNE)
+        {
+            *data++ = I2C1->RXDR; // Read the data and increment the pointer
         }
     }
 
@@ -154,13 +143,13 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
 
 /*******************************************************************
  * @name       :DS3231_Write
- * @function   :Writes data to DS3231 memory with a timeout
+ * @function   :Write data to DS3231 memory with timeout using TIM1
  * @parameters :memadd, data, length, timeout
- * @retvalue   :DS3231_SUCCESS or DS3231_TIMEOUT_ERROR
+ * @retvalue   :None
  *******************************************************************/
 int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
 {
-    // Enable I2C
+    // Enable I2C1 peripheral
     I2C1->CR1 |= I2C_CR1_PE;
 
     // Configure I2C for writing data
@@ -172,35 +161,12 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     I2C1->CR2 |= I2C_CR2_AUTOEND;  // Enable auto-stop
     I2C1->CR2 |= I2C_CR2_START;  // Generate start condition
 
+    // Send memory address and data
+    int i = 0;  // Initialize index for data
     TIM2_ResetCounter();
     TIM2_StartTimer();
 
-    // Wait for memory address transmission
-    while (!(I2C1->ISR & I2C_ISR_TXIS))
-    {
-        if (TIM2_GetCounterValue() > timeout)
-        {
-            TIM2_StopTimer();
-            return DS3231_TIMEOUT_ERROR;
-        }
-    }
-    I2C1->TXDR = memadd; // Send memory address
-
-    // Transmit data
-    for (uint8_t i = 0; i < length; i++)
-    {
-        while (!(I2C1->ISR & I2C_ISR_TXIS))
-        {
-            if (TIM2_GetCounterValue() > timeout)
-            {
-                TIM2_StopTimer();
-                return DS3231_TIMEOUT_ERROR;
-            }
-        }
-        I2C1->TXDR = data[i]; // Send data
-    }
-
-    // Wait for STOP condition
+    // Wait for stop condition or timeout
     while (!(I2C1->ISR & I2C_ISR_STOPF))
     {
         if (TIM2_GetCounterValue() > timeout)
@@ -208,9 +174,16 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
             TIM2_StopTimer();
             return DS3231_TIMEOUT_ERROR;
         }
+        // If transmit buffer is empty, send memory address or data
+        if (I2C1->ISR & I2C_ISR_TXE)
+        {
+            I2C1->TXDR = (i == 0) ? memadd : data[i - 1]; // Send memory address first, then data
+            i++;  // Increment index
+        }
     }
 
     // Disable I2C1 after transmission
+    USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
     return DS3231_SUCCESS;
