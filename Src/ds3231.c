@@ -1,6 +1,5 @@
 #include "../Inc/ds3231.h"
 #include "../Inc/tim.h"
-#include "../Inc/usart.h"
 
 /*******************************************************************
  * @name       :DS3231_GPIO_Config
@@ -86,7 +85,7 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     I2C1->CR1 |= I2C_CR1_PE;
 
     // Set slave address for write operation
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1); // Set slave address
+    I2C1->CR2 = (DS3231_I2C_ADDRESS << 1); // Set slave address
     I2C1->CR2 &= ~I2C_CR2_ADD10; // 7-bit addressing
     I2C1->CR2 |= (1 << I2C_CR2_NBYTES_Pos); // Set number to transfer to 1 for write operation
     I2C1->CR2 &= ~I2C_CR2_RD_WRN; // Set the mode to write mode
@@ -115,7 +114,7 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     // Reset I2C and enable for read operation
     I2C1->CR1 &= ~I2C_CR1_PE; // Reset I2C
     I2C1->CR1 |= I2C_CR1_PE; // Enable I2C
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1); // Set slave address
+    I2C1->CR2 = (DS3231_I2C_ADDRESS << 1); // Set slave address
     I2C1->CR2 |= I2C_CR2_RD_WRN; // Set mode to read operation
     I2C1->CR2 |= (length << I2C_CR2_NBYTES_Pos); // Set length to the required length
     I2C1->CR2 |= I2C_CR2_AUTOEND; // Auto-generate stop after transfer is completed
@@ -154,7 +153,7 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
 
     // Configure I2C for writing data
     I2C1->CR2 = 0;  // Reset control register
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1);  // Set slave address (shifted left)
+    I2C1->CR2 = (DS3231_I2C_ADDRESS << 1);  // Set slave address (shifted left)
     I2C1->CR2 &= ~I2C_CR2_ADD10;  // 7-bit addressing mode
     I2C1->CR2 |= ((length + 1) << I2C_CR2_NBYTES_Pos);  // Set number of bytes to write (include memory address)
     I2C1->CR2 &= ~I2C_CR2_RD_WRN;  // Set to write mode
@@ -183,7 +182,6 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     }
 
     // Disable I2C1 after transmission
-    USART_Serial_Print("%d\r\n", TIM2_GetCounterValue());
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
     return DS3231_SUCCESS;

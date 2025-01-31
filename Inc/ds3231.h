@@ -4,7 +4,7 @@
 #include <stm32f7xx.h>
 
 #define DS3231_I2C1_AF 0x04
-#define DS3231_I2C_ADRESS 0x68
+#define DS3231_I2C_ADDRESS 0x68
 
 #define DS3231_TIMEOUT_ERROR 1
 #define DS3231_SUCCESS 0
