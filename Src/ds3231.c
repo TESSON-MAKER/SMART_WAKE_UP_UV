@@ -84,13 +84,8 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     // Enable I2C
     I2C1->CR1 |= I2C_CR1_PE;
 
-<<<<<<< HEAD
     // Set slave address for write operation
     I2C1->CR2 = (DS3231_I2C_ADDRESS << 1); // Set slave address
-=======
-    // Configure slave address for write mode
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1); // Set slave address
->>>>>>> 8f5d283ff6c801fb18b79714db747448e15afdb2
     I2C1->CR2 &= ~I2C_CR2_ADD10; // 7-bit addressing
     I2C1->CR2 |= (1 << I2C_CR2_NBYTES_Pos); // 1 byte to write (memory address)
     I2C1->CR2 &= ~I2C_CR2_RD_WRN; // Write mode
@@ -120,7 +115,6 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
         }
     }
 
-<<<<<<< HEAD
     // Reset I2C and enable for read operation
     I2C1->CR1 &= ~I2C_CR1_PE; // Reset I2C
     I2C1->CR1 |= I2C_CR1_PE; // Enable I2C
@@ -129,13 +123,6 @@ int DS3231_Read(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout)
     I2C1->CR2 |= (length << I2C_CR2_NBYTES_Pos); // Set length to the required length
     I2C1->CR2 |= I2C_CR2_AUTOEND; // Auto-generate stop after transfer is completed
     I2C1->CR2 |= I2C_CR2_START; // Generate start
-=======
-    // Restart for read operation
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1) | I2C_CR2_RD_WRN; // Address + Read mode
-    I2C1->CR2 |= (length << I2C_CR2_NBYTES_Pos); // Number of bytes to read
-    I2C1->CR2 |= I2C_CR2_AUTOEND; // Auto STOP
-    I2C1->CR2 |= I2C_CR2_START; // Generate start condition
->>>>>>> 8f5d283ff6c801fb18b79714db747448e15afdb2
 
     for (uint8_t i = 0; i < length; i++)
     {
@@ -176,7 +163,6 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     // Enable I2C
     I2C1->CR1 |= I2C_CR1_PE;
 
-<<<<<<< HEAD
     // Configure I2C for writing data
     I2C1->CR2 = 0;  // Reset control register
     I2C1->CR2 = (DS3231_I2C_ADDRESS << 1);  // Set slave address (shifted left)
@@ -185,14 +171,6 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
     I2C1->CR2 &= ~I2C_CR2_RD_WRN;  // Set to write mode
     I2C1->CR2 |= I2C_CR2_AUTOEND;  // Enable auto-stop
     I2C1->CR2 |= I2C_CR2_START;  // Generate start condition
-=======
-    // Configure slave address for write mode
-    I2C1->CR2 = (DS3231_I2C_ADRESS << 1); // Set slave address
-    I2C1->CR2 &= ~I2C_CR2_ADD10; // 7-bit addressing
-    I2C1->CR2 |= ((length + 1) << I2C_CR2_NBYTES_Pos); // Memory address + data
-    I2C1->CR2 &= ~I2C_CR2_RD_WRN; // Write mode
-    I2C1->CR2 |= I2C_CR2_START; // Generate start condition
->>>>>>> 8f5d283ff6c801fb18b79714db747448e15afdb2
 
     TIM2_ResetCounter();
     TIM2_StartTimer();
@@ -232,10 +210,7 @@ int DS3231_Write(uint8_t memadd, uint8_t *data, uint8_t length, uint32_t timeout
         }
     }
 
-<<<<<<< HEAD
     // Disable I2C1 after transmission
-=======
->>>>>>> 8f5d283ff6c801fb18b79714db747448e15afdb2
     TIM2_StopTimer();
     I2C1->CR1 &= ~I2C_CR1_PE;
     return DS3231_SUCCESS;
