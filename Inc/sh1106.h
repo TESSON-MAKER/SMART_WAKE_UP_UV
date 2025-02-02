@@ -62,7 +62,6 @@
 #define YLevel                  (uint8_t) 0xB0
 
 void SH1106_Init(void);
-void SH1106_SendCmd(uint8_t cmd);
 void SH1106_SetPixel(uint8_t pixel, int16_t x, int16_t y);
 void SH1106_DrawCharacter(uint8_t color, int16_t x, int16_t y, const Font *font, uint8_t letterNumber);
 void SH1106_FontPrint(uint8_t color, int16_t x, int16_t y, const Font *font, const char *format, ...);

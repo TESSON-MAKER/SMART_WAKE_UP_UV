@@ -110,7 +110,7 @@ static void SH1106_SpiTransmit(uint8_t msg, uint16_t timeout)
  * @parameters :cmd
  * @retvalue   :None
  *******************************************************************/
-void SH1106_SendCmd(uint8_t cmd)
+static void SH1106_SendCmd(uint8_t cmd)
 {
 	SH1106_DC_LOW; //Command mode
 	SH1106_CS_LOW;

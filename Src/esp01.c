@@ -1,81 +1,194 @@
-#include "esp01.h"
+#include "../Inc/esp01.h"
+#include "../Inc/esp01_buffer.h"
+#include "../Inc//tim.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 
+#define ESP_BUF_SIZE  128
+
+CircularBufferTypeDef ESP_RX_BUF;
+uint8_t ESP_RX_BUF_BUFF[ESP_BUF_SIZE] = {0x00};
+
+volatile uint8_t rxIndex = 0;
+
 /*******************************************************************
- * @name       :ESP01_Usart_Init
- * @date       :2024-10-22
- * @function   :ESP01 USART Initialization
+ * @name       :ESP01_GPIO_Config
+ * @function   :Configure GPIO for UART
  * @parameters :None
  * @retvalue   :None
-********************************************************************/
-void ESP01_Usart_Init(void)
+ *******************************************************************/
+static void ESP01_GPIO_Config(void)
 {
-    // Enable clock for GPIOE (port used by UART7)
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;
-
-    // Enable clock for UART7
-    RCC->APB1ENR |= RCC_APB1ENR_UART7EN;
-
-    // Configure PE8 in alternate function mode (UART7 TX)
-    GPIOE->MODER &= ~GPIO_MODER_MODER8;     // Clear the configuration bits
-    GPIOE->MODER |= GPIO_MODER_MODER8_1;    // Set PE8 to alternate function mode
-
-    // Configure PE7 in alternate function mode (UART7 RX)
-    GPIOE->MODER &= ~GPIO_MODER_MODER7;     // Clear the configuration bits
-    GPIOE->MODER |= GPIO_MODER_MODER7_1;    // Set PE7 to alternate function mode
-
-    // Assign alternate function AF7 to PE8 (UART7 TX)
-    GPIOE->AFR[1] &= ~(0xF << GPIO_AFRH_AFRH0_Pos); // Clear existing bits
-    GPIOE->AFR[1] |= (UART7_AF8 << GPIO_AFRH_AFRH0_Pos);
-
-    // Assign alternate function AF7 to PE7 (UART7 RX)
-    GPIOE->AFR[0] &= ~(0xF << GPIO_AFRL_AFRL7_Pos); // Clear existing bits
-    GPIOE->AFR[0] |= (UART7_AF8 << GPIO_AFRL_AFRL7_Pos);
-
-    // Set the baud rate
-    UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
-
-    // Enable transmitter (TE) and receiver (RE)
-    UART7->CR1 = USART_CR1_TE | USART_CR1_RE;
-
-    // Enable UART7 peripheral
-    UART7->CR1 |= USART_CR1_UE;
+	// Enable clock for GPIOE (port used by UART7)
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;
+	
+	// Configure PE8 in alternate function mode (UART7 TX)
+	GPIOE->MODER &= ~GPIO_MODER_MODER8;
+	GPIOE->MODER |= GPIO_MODER_MODER8_1;
+	GPIOE->AFR[1] |= (UART7_AF8 << GPIO_AFRH_AFRH0_Pos);
+	
+	// Configure PE7 in alternate function mode (UART7 RX)
+	GPIOE->MODER &= ~GPIO_MODER_MODER7;
+	GPIOE->MODER |= GPIO_MODER_MODER7_1;
+	GPIOE->AFR[0] |= (UART7_AF8 << GPIO_AFRL_AFRL7_Pos);
 }
 
 /*******************************************************************
- * @name       :ESP01_Send
- * @date       :2024-10-22
- * @function   :Send formatted data over UART
- * @parameters :const char *format - formatted string to send
+ * @name       :ESP01_USART_Config
+ * @function   :Configure UART for ESP01
+ * @parameters :None
  * @retvalue   :None
-********************************************************************/
-void ESP01_Send(const char *format, ...)
+ *******************************************************************/
+static void ESP01_USART_Config(void)
 {
-    // Check if the pointer is NULL
-    if (format == NULL)
-    {
-        return; // Do nothing if the format is NULL
-    }
+	// Enable clock for UART7
+	RCC->APB1ENR |= RCC_APB1ENR_UART7EN;
 
-    char buffer[128]; // Buffer to store the formatted string
-    va_list args;
+	// Set the baud rate
+	UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
 
-    // Format the string
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
+	// Enable transmitter (TE) and receiver (RE)
+	UART7->CR1 = USART_CR1_TE | USART_CR1_RE;
 
-    // Send each character one by one
-    for (int i = 0; buffer[i] != '\0'; i++)
-    {
-        // Wait until the TDR register is ready to transmit
-        while (!(UART7->ISR & USART_ISR_TXE));
+	// Enable RX interrupt
+	UART7->CR1 |= USART_CR1_RXNEIE;
+	NVIC_EnableIRQ(UART7_IRQn);
 
-        // Write the character to the data register
-        UART7->TDR = buffer[i];
-    }
+	// Enable UART7 peripheral
+	UART7->CR1 |= USART_CR1_UE;
+}
 
-    // Wait until the transmission is complete
-    while (!(UART7->ISR & USART_ISR_TC));
+/*******************************************************************
+ * @name       :ESP01_BUFFER_Config
+ * @function   :Configure BUFFER for ESP01
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+static void ESP01_BUFFER_Config()
+{
+	ESP_RX_BUF.data = ESP_RX_BUF_BUFF;
+	ESP_RX_BUF.capacity = ESP_BUF_SIZE;
+}
+
+/*******************************************************************
+ * @name       :ESP01_Init
+ * @function   :Init ESP01
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+void ESP01_Init(void)
+{
+	ESP01_GPIO_Config();
+	ESP01_USART_Config();
+	ESP01_BUFFER_Config();
+}
+
+/*******************************************************************
+ * @name       :ESP01_UART_SendString
+ * @function   :Send a string
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+void ESP01_UART_SendString(const char *str)
+{
+	if (str == NULL) return; // Do nothing if the string is NULL
+
+	// Send each character one by one
+	while (*str) // Loop until the null-terminator is found
+	{
+		while (!(UART7->ISR & USART_ISR_TXE)); // Wait until ready to transmit
+		UART7->TDR = *str; // Send each character
+		str++; // Move to the next character in the string
+	}
+
+	// Wait until the transmission is complete
+	while (!(UART7->ISR & USART_ISR_TC));  
+}
+
+/*******************************************************************
+ * @name       :ESP01_UART_SendFormattedString
+ * @function   :Send a formated string
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+void ESP01_UART_SendFormattedString(const char *format, ...)
+{
+	if (format == NULL) return; // Do nothing if the format is NULL
+
+	va_list args;
+	va_start(args, format);
+	char buffer[128]; // Buffer to store the formatted string
+	vsnprintf(buffer, sizeof(buffer), format, args); // Format the string
+	va_end(args);
+
+	ESP01_UART_SendString(buffer); // Send the formatted string
+}
+
+/*******************************************************************
+ * @name       :ESP01_SendCmd
+ * @function   :Send a command
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+/*void ESP01_SendCmd(char *cmd, char *ack, uint16_t waittime)
+{
+	ESP01_UART_SendString(cmd);
+	TIM1_WaitMilliseconds(50);
+	if (waittime < 10) waittime = 10;
+	
+	
+}*/
+
+/*******************************************************************
+ * @name       :ESP01_UART_ReceiveChar
+ * @function   :Receive a uint8_t value
+ * @parameters :None
+ * @retvalue   :receivedValue
+ *******************************************************************/
+static uint8_t ESP01_UART_ReceiveChar(void) 
+{
+	uint8_t receivedValue = (UART7->RDR & 0xFF);
+	return receivedValue;
+}
+
+/*******************************************************************
+ * @name       :ESP01_UART_GetITStatus
+ * @function   :Verification
+ * @parameters :None
+ * @retvalue   :receivedValue
+ *******************************************************************/
+static uint8_t ESP01_UART_GetITStatus(void)
+{
+	uint8_t verif = (UART7->ISR & USART_ISR_RXNE);
+	return verif ? 1 : 0;
+}
+
+/*******************************************************************
+ * @name       :USART_ClearITPendingBit
+ * @function   :Clear the interrupt pending bit for USART errors
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+static void ESP01_USART_ClearITPendingBit(void) 
+{
+	UART7->ICR |= USART_ICR_ORECF;
+	UART7->ICR |= USART_ICR_PECF;
+}
+
+/*******************************************************************
+ * @name       :UART7_IRQHandler
+ * @function   :UART7 Interrupt Handler for RX data reception
+ * @parameters :None
+ * @retvalue   :None
+ *******************************************************************/
+void UART7_IRQHandler(void)
+{
+	unsigned char receivedChar;
+	if (ESP01_UART_GetITStatus())
+	{
+		receivedChar = ESP01_UART_ReceiveChar();
+		BUFFER_Push(&ESP_RX_BUF, receivedChar);
+		ESP01_USART_ClearITPendingBit();
+	}
 }
