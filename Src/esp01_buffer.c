@@ -80,9 +80,10 @@ uint16_t BUFFER_GetLength(CircularBufferTypeDef* buff)
  *******************************************************************/
 uint8_t BUFFER_Push(CircularBufferTypeDef* buff, uint8_t data)
 {
+	if (buff->writeIndex == buff->readIndex) return 1;
 	buff->data[buff->writeIndex] = data;
 	buff->writeIndex = (buff->writeIndex + 1) % buff->capacity;
-	return (buff->writeIndex == buff->readIndex) ? 1 : 0;
+	return 0;
 }
 
 /*******************************************************************
