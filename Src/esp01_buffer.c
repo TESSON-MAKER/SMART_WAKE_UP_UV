@@ -4,7 +4,7 @@
 /*******************************************************************
  * @name       : BUFFER_ResetCircular
  * @function   : Resets the circular buffer by setting indices to 
-								 0 and clearing content.
+                 0 and clearing content.
  * @param      : CircularBufferTypeDef* buff - Pointer to buffer.
  * @return     : None
  *******************************************************************/
