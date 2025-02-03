@@ -4,130 +4,110 @@
 #include "../Inc/esp01_buffer.h"
 
 /************************************************************************************
- * @name       : Buffer_Reset
+ * @name       : BUFFER_Reset
  * @function   : Resets the circular buffer by setting the read and write indices to 0.
  * @parameters : CircularBufferTypeDef* buff - Pointer to the buffer structure.
  * @retvalue   : None
  ************************************************************************************/
-void Buffer_Reset(CircularBufferTypeDef* buff)
+void BUFFER_Reset(CircularBufferTypeDef* buff)
 {
-  // Reset both read and write indices to the start of the buffer
-  buff->readIndex = 0;
-  buff->writeIndex = 0;
+	// Reset indices and buffer size
+	buff->readIndex = 0;
+	buff->writeIndex = 0;
+	buff->size = 0;
 }
 
 /************************************************************************************
- * @name       : Buffer_Length
+ * @name       : BUFFER_GetLength
  * @function   : Calculates the current length of data in the circular buffer.
  * @parameters : CircularBufferTypeDef* buff - Pointer to the buffer structure.
  * @retvalue   : uint16_t - The current number of elements in the buffer.
  ************************************************************************************/
-uint16_t Buffer_Length(CircularBufferTypeDef* buff)
+uint16_t BUFFER_GetLength(CircularBufferTypeDef* buff)
 {
-  // If the buffer hasn't wrapped around, length is simply the difference
-  if (buff->writeIndex >= buff->readIndex) 
-  {
-    uint16_t normalCase = buff->writeIndex - buff->readIndex;
-    return normalCase;  // Normal case
-  }
-
-  // If the buffer has wrapped around, account for the wrap
-  uint16_t wrapAroundCase = (buff->capacity - buff->readIndex) + buff->writeIndex;
-  return wrapAroundCase; // Wrap-around case
+	return buff->size;
 }
 
 /************************************************************************************
- * @name       : Buffer_Push
+ * @name       : BUFFER_Push
  * @function   : Adds a new data element to the circular buffer.
  * @parameters : CircularBufferTypeDef* buff - Pointer to the buffer structure.
  *               uint8_t data - The data byte to push into the buffer.
- * @retvalue   : uint8_t - Returns 1 if the push was successful, 0 if the data was overwritten.
+ * @retvalue   : uint8_t - Returns 1 if the push was successful, 0 if the buffer is full.
  ************************************************************************************/
 uint8_t BUFFER_Push(CircularBufferTypeDef* buff, uint8_t data)
 {
-  // Write the new data at the current write position
-  buff->data[buff->writeIndex] = data;
+	// Check if buffer is full
+	if (buff->size >= buff->capacity)
+	{
+			return 0;  // Buffer is full, cannot push data
+	}
 
-  // Move the write index to the next position
-  buff->writeIndex++;
+	// Write data to the buffer
+	buff->data[buff->writeIndex] = data;
 
-  // Wrap around the write index if it exceeds the buffer capacity
-  if (buff->writeIndex >= buff->capacity)
-  {
-    buff->writeIndex = 0;
-  }
+	// Move the write index forward and wrap around if necessary
+	buff->writeIndex = (buff->writeIndex + 1) % buff->capacity;
 
-  // If the buffer is full (read index equals write index), overwrite the oldest data
-  if (buff->readIndex == buff->writeIndex)
-  {
-    // Move the read index forward to discard the oldest data
-    buff->readIndex = (buff->readIndex + 1) % buff->capacity;
-    return 0;  // Indicate that data was overwritten
-  } 
-  
-  return 1;  // Indicate successful push
+	// Increase buffer size
+	buff->size++;
+
+	return 1;  // Push successful
 }
 
 /************************************************************************************
- * @name       : Buffer_Pop
- * @function   : Removes a data element from the readIndex of the buffer.
+ * @name       : BUFFER_PopData
+ * @function   : Removes a data element from the buffer and stores it in *data.
  * @parameters : CircularBufferTypeDef* buff - Pointer to the buffer structure.
- *               uint8_t* data - Pointer to the data byte where the popped value will be stored.
+ *               uint8_t* data - Pointer where the popped value will be stored.
  * @retvalue   : uint8_t - Returns 1 if data was successfully popped, 0 if the buffer is empty.
  ************************************************************************************/
-uint8_t Buffer_Pop(CircularBufferTypeDef* buff, uint8_t* data)
+uint8_t BUFFER_PopData(CircularBufferTypeDef* buff, uint8_t* data)
 {
-  // If the buffer is empty (readIndex == writeIndex), no data can be popped
-  if (buff->readIndex == buff->writeIndex) return 0;
+	// Check if buffer is empty
+	if (buff->size == 0) 
+	{
+			return 0;  // No data to pop
+	}
 
-  // Retrieve the data at the readIndex of the buffer
-  *data = buff->data[buff->readIndex];
+	// Retrieve data from the buffer
+	*data = buff->data[buff->readIndex];
 
-  // Move the readIndex index forward to discard the popped data
-  buff->readIndex = (buff->readIndex + 1) % buff->capacity;
+	// Move the read index forward and wrap around if necessary
+	buff->readIndex = (buff->readIndex + 1) % buff->capacity;
 
-  return 1;  // Indicate successful pop
+	// Decrease buffer size
+	buff->size--;
+
+	return 1;  // Pop successful
 }
 
 /************************************************************************************
- * @name       : Buffer_Pop_All
+ * @name       : BUFFER_PopAllData
  * @function   : Removes all data elements from the buffer and stores them in a clip.
  * @parameters : CircularBufferTypeDef* buff - Pointer to the buffer structure.
  *               BufferClip* clip - Pointer to the clip structure to store the popped data.
- * @retvalue   : uint8_t - Returns 1 if all data was successfully popped, 0 if the buffer is empty.
+ * @retvalue   : uint8_t - Returns 1 if at least one element was extracted, 0 if the buffer is empty.
  ************************************************************************************/
-uint8_t Buffer_Pop_All(CircularBufferTypeDef* buff, BufferClip* clip)
+uint8_t BUFFER_PopAllData(CircularBufferTypeDef* buff, BufferClip* clip)
 {
-  // If the buffer is empty (readIndex == writeIndex), no data can be popped
-  if (buff->readIndex == buff->writeIndex) return 0;
-  
-  // Clear the clip data and reset its length
-  memset(clip->data, 0x00, clip->size * sizeof(uint8_t));
-  clip->length = 0;
+	// Check if buffer is empty
+	if (buff->size == 0) 
+	{
+		return 0;  // No data to pop
+	}
 
-  // If the readIndex index is greater than the writeIndex (buffer wrapped around)
-  if (buff->readIndex > buff->writeIndex) 
-  {
-    // Copy data from the readIndex to the end of the buffer
-    while (buff->readIndex < buff->capacity && clip->length < clip->size) 
-    {
-      clip->data[clip->length++] = buff->data[buff->readIndex++];
-    }
+	// Clear clip memory (optional)
+	memset(clip->data, 0x00, clip->size);
 
-    // Reset the readIndex index if it reached the buffer end
-    if (buff->readIndex == buff->capacity) 
-    {
-      buff->readIndex = 0;
-    }
-  }
+	// Extract as many elements as possible
+	clip->length = 0;
+	while (buff->size > 0 && clip->length < clip->size)
+	{
+		clip->data[clip->length++] = buff->data[buff->readIndex];
+		buff->readIndex = (buff->readIndex + 1) % buff->capacity;
+		buff->size--;
+	}
 
-  // Copy the remaining data from the readIndex to the writeIndex
-  while (buff->readIndex < buff->writeIndex && clip->length < clip->size) 
-  {
-    clip->data[clip->length++] = buff->data[buff->readIndex++];
-  }
-
-  return 1;  // Indicate successful pop
+	return 1;  // Pop successful
 }
-
-

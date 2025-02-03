@@ -16,6 +16,6 @@ void EXTI4_IRQHandler(void);
 void EXTI3_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 void BUTTONS_KeyState(void);
-void TIM2_IRQHandler(void);
+void TIM4_IRQHandler(void);
 
 #endif  // BUTTONS_H

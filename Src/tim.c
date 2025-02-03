@@ -25,7 +25,7 @@ void TIM2_InitForGeneralPurpose(void)
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;   // Enable Timer 2 clock
 	while (!(RCC->APB1ENR & RCC_APB1ENR_TIM2EN)); // Wait for Timer 2 clock to be enabled
 
-	TIM2->PSC = TIM_PSC_MICROSECONDS;     // Prescaler for milliseconds
+	TIM2->PSC = TIM_PSC_MILLISECONDS;     // Prescaler for milliseconds
 	TIM2->ARR = 0xFFFF;                   // Set max count value
 	//TIM2->CR1 |= TIM_CR1_OPM;           // One-Pulse Mode (stops after expiration)
 }

@@ -44,12 +44,12 @@ int main(void)
 	URM37_Init();
 	ESP01_Init();
 	
-	ESP01_UART_SendString("AT\r\n");
+	if (ESP8266_Send_Cmd("AT\r\n", "OK", 50000))
+	{
+		while(1);
+	}
 	TIM1_WaitMilliseconds(1000);
 	
-	ESP01_UART_SendString("AT\r\n");
-	TIM1_WaitMilliseconds(1000);
-
 	GPIO_PinMode(GPIOB, 7, OUTPUT);
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
 	
@@ -64,7 +64,7 @@ int main(void)
 
 	if (DS3231_Write(0x00, dataI, 7, 100000))
 	{
-		while(1);
+		//while(1);
 	}
 
 	while (1) 
