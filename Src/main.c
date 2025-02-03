@@ -44,10 +44,8 @@ int main(void)
 	URM37_Init();
 	ESP01_Init();
 	
-	if (ESP8266_Send_Cmd("AT\r\n", "OK", 50000))
-	{
-		while(1);
-	}
+	ESP01_UART_SendString("AT\r\n");
+		
 	TIM1_WaitMilliseconds(1000);
 	
 	GPIO_PinMode(GPIOB, 7, OUTPUT);

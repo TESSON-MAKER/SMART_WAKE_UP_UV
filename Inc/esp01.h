@@ -12,6 +12,6 @@
 void ESP01_Init(void);
 void ESP01_UART_SendString(const char *str);
 void ESP01_UART_SendFormattedString(const char *format, ...);
-uint8_t ESP8266_Send_Cmd(char *cmd, char *ack, uint16_t timeout);
+uint8_t ESP8266_Send_Cmd(char *cmd, char *ack/*, uint16_t timeout*/);
 
 #endif /* ESP01_H */

@@ -1,6 +1,6 @@
 #include "../Inc/esp01.h"
 #include "../Inc/esp01_buffer.h"
-#include "../Inc//tim.h"
+#include "../Inc/tim.h"
 
 #include <stdarg.h>
 #include <string.h>
@@ -10,13 +10,12 @@
 uint8_t ESP01_RX_FINISHED=0;
 
 CircularBufferTypeDef ESP_RX_BUF;
-uint8_t ESP_RX_BUF_BUFF[ESP_BUF_SIZE] = {0x00};
+uint8_t ESP_RX_BUF_ARRAY[ESP_BUF_SIZE] = {0x00};
 
-BufferClip ESP_RX_CLIP;
-uint8_t ESP_RX_CLIP_DATA[ESP_BUF_SIZE] = {0x00};
-uint16_t testValue = 0;
+ClipBufferTypeDef ESP_RX_CLIP;
+uint8_t ESP_RX_CLIP_ARRAY[ESP_BUF_SIZE] = {0x00};
 
-volatile uint8_t rxIndex = 0;
+static void ESP01_UART_IRQ_ON(void);
 
 /*******************************************************************
  * @name       :ESP01_GPIO_Config
@@ -52,6 +51,7 @@ static void ESP01_USART_Config(void)
 	UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
 	UART7->CR1 = USART_CR1_TE | USART_CR1_RE;
 	UART7->CR1 |= USART_CR1_UE;
+	ESP01_UART_IRQ_ON();
 }
 
 /*******************************************************************
@@ -78,22 +78,16 @@ static void ESP01_TIM3_Config(void)
 /*******************************************************************
  * @name       :ESP01_BUFFER_Config
  * @function   :Configure BUFFER for ESP01
- * @parameters :None
- * @retvalue   :None
  *******************************************************************/
 static void ESP01_BUFFER_Config()
 {
-	ESP_RX_BUF.data = ESP_RX_BUF_BUFF;
-	ESP_RX_BUF.capacity = ESP_BUF_SIZE;
-	ESP_RX_CLIP.data = ESP_RX_CLIP_DATA;
-  ESP_RX_CLIP.size = ESP_BUF_SIZE;
+	BUFFER_CircularInit(&ESP_RX_BUF, ESP_RX_BUF_ARRAY, ESP_BUF_SIZE);
+  BUFFER_ClipInit(&ESP_RX_CLIP, ESP_RX_CLIP_ARRAY, ESP_BUF_SIZE);
 }
 
 /*******************************************************************
  * @name       :ESP01_Init
  * @function   :Init ESP01
- * @parameters :None
- * @retvalue   :None
  *******************************************************************/
 void ESP01_Init(void)
 {
@@ -149,14 +143,13 @@ void ESP01_UART_SendString(const char *str)
 	while (!(UART7->ISR & USART_ISR_TC));
 }
 
-uint8_t ESP8266_Send_Cmd(char *cmd, char *ack, uint16_t timeout)
+uint8_t ESP8266_Send_Cmd(char *cmd, char *ack/*, uint16_t timeout*/)
 {
 	ESP01_UART_SendString(cmd);
-	ESP01_UART_IRQ_ON();
 	
 	TIM2_ResetCounter();
 	TIM2_StartTimer();
-	while(TIM2_GetCounterValue() < timeout)
+	while(1/*TIM2_GetCounterValue() < timeout*/)
 	{
 		if(ESP01_RX_FINISHED)
 		{
