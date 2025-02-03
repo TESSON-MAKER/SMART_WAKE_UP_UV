@@ -65,9 +65,7 @@ void BUFFER_ClipInit(ClipBufferTypeDef* clip, uint8_t* clipArray, uint16_t capac
 uint16_t BUFFER_GetLength(CircularBufferTypeDef* buff)
 {
 	if (buff->writeIndex >= buff->readIndex) 
-	{
 		return buff->writeIndex - buff->readIndex;
-	} 
 	return (buff->capacity - buff->readIndex) + buff->writeIndex; 
 }
 
@@ -80,7 +78,7 @@ uint16_t BUFFER_GetLength(CircularBufferTypeDef* buff)
  *******************************************************************/
 uint8_t BUFFER_Push(CircularBufferTypeDef* buff, uint8_t data)
 {
-	if (buff->writeIndex == buff->readIndex) return 1;
+	if(buff->writeIndex == buff->readIndex) return 1;
 	buff->data[buff->writeIndex] = data;
 	buff->writeIndex = (buff->writeIndex + 1) % buff->capacity;
 	return 0;
