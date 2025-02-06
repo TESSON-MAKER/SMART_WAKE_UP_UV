@@ -15,8 +15,6 @@ uint8_t ESP_RX_BUF_ARRAY[ESP_BUF_SIZE] = {0x00};
 ClipBufferTypeDef ESP_RX_CLIP;
 uint8_t ESP_RX_CLIP_ARRAY[ESP_BUF_SIZE] = {0x00};
 
-static void ESP01_UART_IRQ_ON(void);
-
 /*******************************************************************
  * @name       :ESP01_GPIO_Config
  * @function   :Configure GPIO for UART
@@ -51,28 +49,8 @@ static void ESP01_USART_Config(void)
 	UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
 	UART7->CR1 = USART_CR1_TE | USART_CR1_RE;
 	UART7->CR1 |= USART_CR1_UE;
-	ESP01_UART_IRQ_ON();
-}
-
-/*******************************************************************
- * @name       :ESP01_TIM3_Config
- * @function   :Configure TIM3 for ESP01
- * @parameters :None
- * @retvalue   :None
- *******************************************************************/
-static void ESP01_TIM3_Config(void)
-{
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Enable TIM3
-
-	TIM3->PSC = TIM3_PRESCALER_VALUE; // Set prescaler
-	TIM3->ARR = TIM3_PUSH_DELAY_VALUE; // Set auto-reload value
-
-	TIM3->DIER |= TIM_DIER_UIE; // Enable update interrupt
-	TIM3->CR1 |= TIM_CR1_CMS_1;
-	TIM3->CR1 &= ~TIM_CR1_CMS_0;
-
-	NVIC_SetPriority(TIM3_IRQn, 4); // Set TIM3 interrupt priority
-	NVIC_EnableIRQ(TIM3_IRQn); // Enable TIM3 interrupt in NVIC
+	UART7->CR1 |= USART_CR1_RXNEIE;
+	NVIC_EnableIRQ(UART7_IRQn);
 }
 
 /*******************************************************************
@@ -93,32 +71,19 @@ void ESP01_Init(void)
 {
 	ESP01_GPIO_Config();
 	ESP01_USART_Config();
-	ESP01_TIM3_Config();
 	ESP01_BUFFER_Config();
 }
 
 /*******************************************************************
- * @name       :ESP01_UART_IRQ_ON
- * @function   :Enable IRQ
+ * @name       :UART_SendByte
+ * @function   :Send a string
  * @parameters :None
  * @retvalue   :None
  *******************************************************************/
-static void ESP01_UART_IRQ_ON(void)
+void UART_SendByte(uint8_t data) 
 {
-	UART7->CR1 |= USART_CR1_RXNEIE;
-	NVIC_EnableIRQ(UART7_IRQn);
-}
-
-/*******************************************************************
- * @name       :ESP01_UART_IRQ_OFF
- * @function   :Disable IRQ
- * @parameters :None
- * @retvalue   :None
- *******************************************************************/
-static void ESP01_UART_IRQ_OFF(void)
-{
-	UART7->CR1 &= ~USART_CR1_RXNEIE;
-	NVIC_DisableIRQ(UART7_IRQn);
+	while (!(UART7->ISR & USART_ISR_TXE));
+	UART7->TDR = data;
 }
 
 /*******************************************************************
@@ -127,45 +92,11 @@ static void ESP01_UART_IRQ_OFF(void)
  * @parameters :None
  * @retvalue   :None
  *******************************************************************/
-void ESP01_UART_SendString(const char *str)
+void ESP01_UART_SendString(const char* str) 
 {
 	if (str == NULL) return; // Do nothing if the string is NULL
-
-	// Send each character one by one
-	while (*str) // Loop until the null-terminator is found
-	{
-		while (!(UART7->ISR & USART_ISR_TXE)); // Wait until ready to transmit
-		UART7->TDR = *str; // Send each character
-		str++; // Move to the next character in the string
-	}
-
-	// Wait until the transmission is complete
+	while (*str) UART_SendByte(*str++);
 	while (!(UART7->ISR & USART_ISR_TC));
-}
-
-uint8_t ESP8266_Send_Cmd(char *cmd, char *ack/*, uint16_t timeout*/)
-{
-	ESP01_UART_SendString(cmd);
-	
-	TIM2_ResetCounter();
-	TIM2_StartTimer();
-	while(1/*TIM2_GetCounterValue() < timeout*/)
-	{
-		if(ESP01_RX_FINISHED)
-		{
-			ESP01_RX_FINISHED = 0;
-			if (BUFFER_PopAllData(&ESP_RX_BUF, &ESP_RX_CLIP) != NULL)
-			{
-        if(strstr((char *)(ESP_RX_CLIP.data), ack) != NULL) 
-				{
-					TIM2_StopTimer();
-					return 0;
-				}
-      }
-		}
-	}
-	TIM2_StopTimer();
-	return 1;
 }
 
 /*******************************************************************
@@ -234,27 +165,7 @@ void UART7_IRQHandler(void)
 	if (ESP01_UART_GetITStatus())
 	{
 		uint8_t receivedChar = ESP01_UART_ReceiveChar();
-		BUFFER_Push(&ESP_RX_BUF, receivedChar);
+		BUFFER_Write(&ESP_RX_BUF, receivedChar);
 		ESP01_USART_ClearITPendingBit();
-		
-		TIM3->CNT = 0;
-		TIM3->CR1 |= TIM_CR1_CEN;
 	}
-}
-
-/*******************************************************************
- * @name       :TIM3_IRQHandler
- * @function   :TIM3 Interrupt to see if the reception is complete
- * @parameters :None
- * @retvalue   :None
- *******************************************************************/
-void TIM3_IRQHandler(void)
-{
-    if (TIM3->SR & TIM_SR_UIF)
-    {
-        TIM3->SR &= ~TIM_SR_UIF;
-				ESP01_UART_IRQ_OFF();
-        ESP01_RX_FINISHED = 1;
-        TIM3->CR1 &= ~TIM_CR1_CEN;
-    }
 }
