@@ -36,17 +36,22 @@ static void MAIN_Settings(void);
 int main(void) 
 {
 	TIM1_InitForDelay();
+	TIM2_Init();
 	SH1106_Init();
 	SH1106_ClearBuffer();
 	USART_Serial_Begin(9600); 
 	BUTTONS_Init();
 	DS3231_Init();
 	URM37_Init();
-	ESP01_Init();
+	ESP01_Init();	
 	
-	ESP01_UART_SendString("AT\r\n");
+	/*if (ESP01_SendCommand("AT", "OK"))
+		while(1);
+	
+	if (ESP01_SendCommand("AT+CWMODE=1", "OK"))
+		while(1);
 		
-	TIM1_WaitMilliseconds(1000);
+	TIM1_WaitMilliseconds(1000);*/
 	
 	GPIO_PinMode(GPIOB, 7, OUTPUT);
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
@@ -60,9 +65,9 @@ int main(void)
 			DS3231_DecToBcd(3),
 			DS3231_DecToBcd(1)};
 
-	if (DS3231_Write(0x00, dataI, 7, 100000))
+	if (DS3231_Write(0x00, dataI, 7, 40000))
 	{
-		//while(1);
+		while(1);
 	}
 
 	while (1) 
@@ -96,7 +101,7 @@ static void MAIN_DisplayDate(void)
 	{
 		uint8_t dataS[7] = {DS3231_DecToBcd(DS3231_Second), DS3231_DecToBcd(DS3231_Minute), DS3231_DecToBcd(DS3231_Hour), DS3231_DecToBcd(DS3231_DayWeek), DS3231_DecToBcd(DS3231_DayMonth), DS3231_DecToBcd(DS3231_Month), DS3231_DecToBcd(DS3231_Year)};
 		
-		if (DS3231_Write(0x00, dataS, 7, 100000))
+		if (DS3231_Write(0x00, dataS, 7, 40000))
 		{
 			while(1);
 		}

@@ -1,5 +1,5 @@
-#ifndef ESP01_BUFFER_H
-#define ESP01_BUFFER_H
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -27,5 +27,6 @@ uint16_t BUFFER_Length(CircularBufferTypeDef* buff);
 uint8_t BUFFER_Write(CircularBufferTypeDef* buff, uint8_t data);
 uint8_t BUFFER_PopData(CircularBufferTypeDef* buff, uint8_t* data);
 uint8_t BUFFER_PopAllData(CircularBufferTypeDef* buff, ClipBufferTypeDef* clip);
+void BUFFER_ResetClip(ClipBufferTypeDef* clip);
 
 #endif

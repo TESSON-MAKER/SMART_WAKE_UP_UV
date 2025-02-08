@@ -9,10 +9,10 @@
  ***********************************************************************************************/
 static void BUFFER_ResetCircular(CircularBufferTypeDef* buff) 
 {
-	buff->readIndex = 0;
-	buff->writeIndex = 0;
-	buff->size = 0;
-	memset(buff->data, 0, buff->capacity);
+    buff->readIndex = 0;
+    buff->writeIndex = 0;
+    buff->size = 0;
+    memset(buff->data, 0, buff->capacity);
 }
 
 /***********************************************************************************************
@@ -21,10 +21,10 @@ static void BUFFER_ResetCircular(CircularBufferTypeDef* buff)
  * @parameters : ClipBufferTypeDef* clip - Pointer to the clip buffer structure.
  * @retvalue   : None
  ***********************************************************************************************/
-static void BUFFER_ResetClip(ClipBufferTypeDef* clip) 
+void BUFFER_ResetClip(ClipBufferTypeDef* clip) 
 {
-	memset(clip->data, 0, clip->capacity);
-	clip->size = 0;
+    memset(clip->data, 0, clip->capacity);
+    clip->size = 0;
 }
 
 /***********************************************************************************************
@@ -37,9 +37,9 @@ static void BUFFER_ResetClip(ClipBufferTypeDef* clip)
  ***********************************************************************************************/
 void BUFFER_CircularInit(CircularBufferTypeDef* buff, uint8_t* bufferArray, uint16_t capacity) 
 {
-	buff->data = bufferArray;
-	buff->capacity = capacity;
-	BUFFER_ResetCircular(buff); // Resets the indices and clears the buffer
+    buff->data = bufferArray;
+    buff->capacity = capacity;
+    BUFFER_ResetCircular(buff); // Resets the indices and clears the buffer
 }
 
 /***********************************************************************************************
@@ -52,9 +52,9 @@ void BUFFER_CircularInit(CircularBufferTypeDef* buff, uint8_t* bufferArray, uint
  ***********************************************************************************************/
 void BUFFER_ClipInit(ClipBufferTypeDef* clip, uint8_t* clipArray, uint16_t capacity) 
 {
-	clip->data = clipArray;
-	clip->capacity = capacity;
-	BUFFER_ResetClip(clip);
+    clip->data = clipArray;
+    clip->capacity = capacity;
+    BUFFER_ResetClip(clip);
 }
 
 /***********************************************************************************************
@@ -65,7 +65,7 @@ void BUFFER_ClipInit(ClipBufferTypeDef* clip, uint8_t* clipArray, uint16_t capac
  ***********************************************************************************************/
 uint16_t BUFFER_Length(CircularBufferTypeDef* buff) 
 {
-	return buff->size;
+    return buff->size;
 }
 
 /***********************************************************************************************
@@ -77,17 +77,17 @@ uint16_t BUFFER_Length(CircularBufferTypeDef* buff)
  ***********************************************************************************************/
 uint8_t BUFFER_Write(CircularBufferTypeDef* buff, uint8_t data)
 {
-	if (buff->size >= buff->capacity) 
-	{
-		// Overwrite: Move readIndex forward to drop the oldest data
-		buff->readIndex = (buff->readIndex + 1) % buff->capacity;
-		buff->size--; // Maintain correct size tracking
-	}
-
-	buff->data[buff->writeIndex] = data;
-	buff->writeIndex = (buff->writeIndex + 1) % buff->capacity;
-	buff->size++;
-	return 0;
+    if (buff->size >= buff->capacity) 
+    {
+        // Overwrite: Move readIndex forward to drop the oldest data
+        buff->readIndex = (buff->readIndex + 1) % buff->capacity;
+        buff->size--; // Maintain correct size tracking
+    }
+    
+    buff->data[buff->writeIndex] = data;
+    buff->writeIndex = (buff->writeIndex + 1) % buff->capacity;
+    buff->size++;
+    return 0;
 }
 
 /***********************************************************************************************
@@ -99,11 +99,11 @@ uint8_t BUFFER_Write(CircularBufferTypeDef* buff, uint8_t data)
  ***********************************************************************************************/
 uint8_t BUFFER_PopData(CircularBufferTypeDef* buff, uint8_t* data) 
 {
-	if (buff->size == 0) return 1; // Buffer empty
-	*data = buff->data[buff->readIndex];
-	buff->readIndex = (buff->readIndex + 1) % buff->capacity;
-	buff->size--;
-	return 0;
+    if (buff->size == 0) return 1; // Buffer empty
+    *data = buff->data[buff->readIndex];
+    buff->readIndex = (buff->readIndex + 1) % buff->capacity;
+    buff->size--;
+    return 0;
 }
 
 /***********************************************************************************************
@@ -115,24 +115,24 @@ uint8_t BUFFER_PopData(CircularBufferTypeDef* buff, uint8_t* data)
  ***********************************************************************************************/
 uint8_t BUFFER_PopAllData(CircularBufferTypeDef* buff, ClipBufferTypeDef* clip) 
 {
-	if (buff->size == 0) 
-	{
-		clip->size = 0;
-		return 1; // Buffer empty
-	}
+    if (buff->size == 0) 
+    {
+        clip->size = 0;
+        return 1; // Buffer empty
+    }
 
-	uint16_t count;
-	if (buff->size > clip->capacity) count = clip->capacity;
-	else count = buff->size;
+    uint16_t count;
+    if (buff->size > clip->capacity) count = clip->capacity;
+    else count = buff->size;
+    
+    uint16_t i = 0;
+    while (i < count) 
+    {
+        clip->data[i++] = buff->data[buff->readIndex];
+        buff->readIndex = (buff->readIndex + 1) % buff->capacity;
+    }
 
-	uint16_t i = 0;
-	while (i < count) 
-	{
-		clip->data[i++] = buff->data[buff->readIndex];
-		buff->readIndex = (buff->readIndex + 1) % buff->capacity;
-	}
-
-	buff->size -= count;
-	clip->size = count;
-	return 0;
+    buff->size -= count;
+    clip->size = count;
+    return 0;
 }
