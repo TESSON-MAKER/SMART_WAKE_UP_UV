@@ -16,8 +16,8 @@ typedef struct {
 // Structure to store extracted data from the buffer
 typedef struct {
     uint8_t* data;          // Pointer to the extracted data (array of bytes)
-    uint8_t capacity;       // Maximum capacity of the buffer (number of elements it can hold)
-    uint8_t size;           // Current number of elements stored
+    uint16_t capacity;       // Maximum capacity of the buffer (number of elements it can hold)
+    uint16_t size;           // Current number of elements stored
 } ClipBufferTypeDef;
 
 // Function prototypes
