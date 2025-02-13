@@ -1,49 +1,14 @@
 #include "../Inc/esp01.h"
-#include "../Inc/esp01_buffer.h"
 #include "../Inc/tim.h"
 
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 
-#define ESP_BUF_SIZE  500
-uint8_t ESP01_RX_FINISHED = 0;
+#define ESP_BUF_SIZE  50
 
-uint8_t ESP_RX_BUF_ARRAY[ESP_BUF_SIZE];
-uint8_t ESP_RX_CLIP_ARRAY[ESP_BUF_SIZE];
-
-CircularBufferTypeDef ESP_RX_BUF;
-ClipBufferTypeDef ESP_RX_CLIP;
-
-uint8_t receive_complete = 0;
-
-/*******************************************************************
- * @name       :ESP01_UART_ReceiveChar
- * @function   :Receive a single character
- *******************************************************************/
-static uint8_t ESP01_UART_ReceiveChar(void)
-{
-    return (UART7->RDR & 0xFF);
-}
-
-static uint8_t ESP01_UART_GetITStatus(void)
-{
-	uint8_t verif = (UART7->ISR & USART_ISR_RXNE);
-	return verif ? 1 : 0;
-}
-
-/*******************************************************************
- * @name       :UART7_IRQHandler
- * @function   :UART7 Interrupt Handler
- *******************************************************************/
-void UART7_IRQHandler(void)
-{
-    if (ESP01_UART_GetITStatus())
-    {
-        uint8_t receivedChar = ESP01_UART_ReceiveChar();
-        BUFFER_Write(&ESP_RX_BUF, receivedChar);
-    }
-}
+static uint8_t ESP01_TXBuffer[ESP_BUF_SIZE];
+static uint8_t ESP01_RXBuffer[ESP_BUF_SIZE];
 
 /*******************************************************************
  * @name       :ESP01_GPIO_Config
@@ -51,17 +16,17 @@ void UART7_IRQHandler(void)
  *******************************************************************/
 static void ESP01_GPIO_Config(void)
 {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN; // Enable GPIOE clock
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN; // Enable GPIOE clock
 
-    // Configure PE8 as UART7 TX
-    GPIOE->MODER &= ~GPIO_MODER_MODER8;
-    GPIOE->MODER |= GPIO_MODER_MODER8_1;
-    GPIOE->AFR[1] |= (UART7_AF8 << GPIO_AFRH_AFRH0_Pos);
+	// Configure PE8 as UART7 TX
+	GPIOE->MODER &= ~GPIO_MODER_MODER8;
+	GPIOE->MODER |= GPIO_MODER_MODER8_1;
+	GPIOE->AFR[1] |= (UART7_AF8 << GPIO_AFRH_AFRH0_Pos);
 
-    // Configure PE7 as UART7 RX
-    GPIOE->MODER &= ~GPIO_MODER_MODER7;
-    GPIOE->MODER |= GPIO_MODER_MODER7_1;
-    GPIOE->AFR[0] |= (UART7_AF8 << GPIO_AFRL_AFRL7_Pos);
+	// Configure PE7 as UART7 RX
+	GPIOE->MODER &= ~GPIO_MODER_MODER7;
+	GPIOE->MODER |= GPIO_MODER_MODER7_1;
+	GPIOE->AFR[0] |= (UART7_AF8 << GPIO_AFRL_AFRL7_Pos);
 }
 
 /*******************************************************************
@@ -70,22 +35,78 @@ static void ESP01_GPIO_Config(void)
  *******************************************************************/
 static void ESP01_USART_Config(void)
 {
-    RCC->APB1ENR |= RCC_APB1ENR_UART7EN;
-    UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
-    UART7->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
-    NVIC_EnableIRQ(UART7_IRQn);
+	RCC->APB1ENR |= RCC_APB1ENR_UART7EN;
+	UART7->BRR = SystemCoreClock / ESP01_BAUDRATE;
+	UART7->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+	UART7->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR; // Enable DMA TX and RX
+
+	NVIC_EnableIRQ(UART7_IRQn);
 }
 
 /*******************************************************************
- * @name       :ESP01_BUFFER_Config
- * @function   :Configure BUFFER for ESP01
+ * @name       :ESP01_DMA_Config
+ * @function   :Configure DMA for ESP01
  *******************************************************************/
-static void ESP01_BUFFER_Config()
+static void ESP01_DMA_Config(void)
 {
-    BUFFER_CircularInit(&ESP_RX_BUF, ESP_RX_BUF_ARRAY, ESP_BUF_SIZE);
-    BUFFER_ClipInit(&ESP_RX_CLIP, ESP_RX_CLIP_ARRAY, ESP_BUF_SIZE);
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN; // Enable DMA1 clock
+
+	// Configure DMA1 Stream1 Channel5 for UART7_TX
+	DMA1_Stream1->CR &= ~DMA_SxCR_EN;
+	DMA1_Stream1->PAR = (uint32_t)&UART7->TDR;
+	DMA1_Stream1->M0AR = (uint32_t)ESP01_TXBuffer;
+	DMA1_Stream1->CR = (5 << DMA_SxCR_CHSEL_Pos) | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE;
+
+	// Configure DMA1 Stream3 Channel5 for UART7_RX
+	DMA1_Stream3->CR &= ~DMA_SxCR_EN;
+	DMA1_Stream3->PAR = (uint32_t)&UART7->RDR;
+	DMA1_Stream3->M0AR = (uint32_t)ESP01_RXBuffer;
+	DMA1_Stream3->NDTR = ESP_BUF_SIZE;
+	DMA1_Stream3->CR = (5 << DMA_SxCR_CHSEL_Pos) | DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE;
+
+	NVIC_EnableIRQ(DMA1_Stream3_IRQn); // Enable DMA RX interrupt
 }
 
+/*******************************************************************
+ * @name       :ESP01_Transmit_DMA
+ * @function   :Transmit data via DMA
+ *******************************************************************/
+void ESP01_Transmit_DMA(uint8_t *data)
+{
+	uint16_t size = strlen((char *)data);
+	if (size > ESP_BUF_SIZE) size = ESP_BUF_SIZE;
+
+	memset(ESP01_TXBuffer, 0, ESP_BUF_SIZE);
+	memcpy(ESP01_TXBuffer, data, size);
+	DMA1_Stream1->NDTR = size;
+	DMA1_Stream1->CR |= DMA_SxCR_EN;
+}
+
+/*******************************************************************
+ * @name       :UART7_IRQHandler
+ * @function   :Handle UART7 interrupts
+ *******************************************************************/
+void UART7_IRQHandler(void)
+{
+	if (UART7->ISR & USART_ISR_RXNE)
+	{
+		uint8_t received = UART7->RDR; // Read received byte
+		// Process received data if needed
+	}
+}
+
+/*******************************************************************
+ * @name       :DMA1_Stream3_IRQHandler
+ * @function   :Handle DMA reception completion
+ *******************************************************************/
+void DMA1_Stream3_IRQHandler(void)
+{
+	if (DMA1->HISR & DMA_LISR_TCIF3)
+	{
+		DMA1->HIFCR |= DMA_LIFCR_CTCIF3; // Clear transfer complete flag
+		// Process received data
+	}
+}
 /*******************************************************************
  * @name       :ESP01_Init
  * @function   :Initialize ESP01 module
@@ -94,44 +115,5 @@ void ESP01_Init(void)
 {
     ESP01_GPIO_Config();
     ESP01_USART_Config();
-    ESP01_BUFFER_Config();
-}
-
-/*******************************************************************
- * @name       :UART_SendByte
- * @function   :Send a byte via UART
- *******************************************************************/
-void UART_SendByte(uint8_t data)
-{
-    while (!(UART7->ISR & USART_ISR_TXE));
-    UART7->TDR = data;
-}
-
-/*******************************************************************
- * @name       :ESP01_UART_SendString
- * @function   :Send a string via UART
- *******************************************************************/
-void ESP01_UART_SendString(const char* str)
-{
-    if (str == NULL) return;
-    while (*str) UART_SendByte(*str++);
-    while (!(UART7->ISR & USART_ISR_TC));
-}
-
-/*******************************************************************
- * @name       :ESP01_SendCommand
- * @function   :Send command and wait for expected response
- *******************************************************************/
-// Correction dans ESP01_SendCommand pour mieux gérer le délai et la synchronisation
-uint8_t ESP01_SendCommand(const char* cmd, const char* expected_response)
-{
-    BUFFER_ResetClip(&ESP_RX_CLIP);  // Réinitialiser le buffer
-    ESP01_UART_SendString(cmd);      // Envoyer la commande
-    ESP01_UART_SendString("\r\n");   // Ajouter un retour à la ligne
-	
-		TIM1_WaitMilliseconds(500);
-		BUFFER_PopAllData(&ESP_RX_BUF, &ESP_RX_CLIP); // Extraire les données reçues
-          
-		if (strstr((char*)ESP_RX_CLIP_ARRAY, expected_response)) return 0;            // Retourner succès
-		else return 1;
+    ESP01_DMA_Config();
 }

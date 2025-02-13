@@ -23,8 +23,8 @@ static void BUFFER_ResetCircular(CircularBufferTypeDef* buff)
  ***********************************************************************************************/
 void BUFFER_ResetClip(ClipBufferTypeDef* clip) 
 {
-    memset(clip->data, 0, clip->capacity);
     clip->size = 0;
+    memset(clip->data, 0, clip->capacity);
 }
 
 /***********************************************************************************************

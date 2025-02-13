@@ -11,6 +11,8 @@ void ESP01_UART_SendString(const char *str);
 void ESP01_UART_SendFormattedString(const char *format, ...);
 uint8_t ESP01_SendCommand(const char* cmd, const char* expected_response);
 
-void ESP01_TIM5_Config(void);
+void ESP01_Transmit_DMA(uint8_t *data);
+void UART7_IRQHandler(void);
+void DMA1_Stream3_IRQHandler(void);
 
 #endif /* ESP01_H */
