@@ -22,11 +22,6 @@ static int8_t DS3231_Century = 0;
 static uint8_t UpdateToDisplay = 0;
 static uint8_t UpdateToSetting = 0;
 
-//static float temp = 0.0;
-
-//uint32_t val = 0;
-//int value = 0;
-
 int move = 0;
 static uint8_t state = 0;
 
@@ -45,7 +40,10 @@ int main(void)
 	URM37_Init();
 	ESP01_Init();	
 	
-	
+	ESP01_Transmit_DMA("AT+CWMODE?\r\n");
+	TIM1_WaitMilliseconds(2000);
+	ESP01_Transmit_DMA("AT+CWMODE=1\r\n");
+	TIM1_WaitMilliseconds(1000);
 	
 	GPIO_PinMode(GPIOB, 7, OUTPUT);
 	GPIO_PinMode(GPIOB, 14, OUTPUT);
